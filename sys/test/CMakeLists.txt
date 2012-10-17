@@ -1,0 +1,14 @@
+cmake_minimum_required(VERSION 2.6)
+
+add_executable(test_conf Conf_test.cc)
+add_executable(test_strutil StrUtil_test.cc)
+add_executable(test_log Log_test.cc)
+
+include_directories(${PROJECT_SOURCE_DIR}/include)
+link_directories(${PROJECT_SOURCE_DIR}/lib)
+target_link_libraries(test_conf libsys gtest)
+target_link_libraries(test_strutil libsys gtest)
+target_link_libraries(test_log libsys gtest)
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Debug")
+endif()
