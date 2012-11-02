@@ -90,15 +90,15 @@ TEST_P(toRealPathTest,test)
     ASSERT_EQ(param.size(),4);
     EXPECT_EQ(toRealPath(param[0],param[1],param[2]),param[3])<<"toRealPath("<<param[0]<<","<<param[1]<<","<<param[2]<<") expect to be "<<param[3]<<" but not.\n";
 }
-static vector<string> makeParam(string a,string b,string c,string d)
-{
-    vector<string> ret;
-    ret.push_back(a);
-    ret.push_back(b);
-    ret.push_back(c);
-    ret.push_back(d);
-    return ret;
-}
+// static vector<string> makeParam(string a,string b,string c,string d)
+// {
+//     vector<string> ret;
+//     ret.push_back(a);
+//     ret.push_back(b);
+//     ret.push_back(c);
+//     ret.push_back(d);
+//     return ret;
+// }
 
 //INSTANTIATE_TEST_CASE_P(test,toRealPathTest,testing::Values(makeParam("test.log","./","default.log","./test.log"),
 //                                                            makeParam("./log/test.log","./","default.log","./log/test.log"),
