@@ -31,8 +31,8 @@ std::string toRealPath(const std::string& oldpath,const std::string& prefix,cons
 std::string trim(std::string& str,const std::string& drop=" ");
 
 void GetTimeString(char** time_str,size_t *len);
-class LogStream;
-void GetTimeString(LogStream& stream);
+//class LogStream;
+//void GetTimeString(LogStream& stream);
 void GetTimeStringForFileName(char *timeBuff,size_t bufflen);
 const char* GetPidStr();
 const char* GetTidStr();

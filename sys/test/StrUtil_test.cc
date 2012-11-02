@@ -100,8 +100,8 @@ static vector<string> makeParam(string a,string b,string c,string d)
     return ret;
 }
 
-INSTANTIATE_TEST_CASE_P(test,toRealPathTest,testing::Values(makeParam("test.log","./","default.log","./test.log"),
-                                                            makeParam("./log/test.log","./","default.log","./log/test.log"),
-                                                            makeParam("/log/test.log","./","default.log","/log/test.log"),
-                                                            makeParam("","./","default.log","./default.log")));
+//INSTANTIATE_TEST_CASE_P(test,toRealPathTest,testing::Values(makeParam("test.log","./","default.log","./test.log"),
+//                                                            makeParam("./log/test.log","./","default.log","./log/test.log"),
+//                                                            makeParam("/log/test.log","./","default.log","/log/test.log"),
+//                                                            makeParam("","./","default.log","./default.log")));
 

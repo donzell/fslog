@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <sys/time.h>
 #include "StrUtil.h"
-#include "LogStream.h"
+//#include "LogStream.h"
 using namespace std;
 
 enum{
@@ -225,27 +225,27 @@ __thread time_t t_lastSecond;
 __thread char t_time[32];
 __thread int offset;
 
-void GetTimeString(LogStream& stream)
-{
-    struct timeval tmval;
-    gettimeofday(&tmval, NULL);
-    //time_t now = time(NULL);
-    time_t now = tmval.tv_sec;
-    if(now != t_lastSecond){
-        t_lastSecond = now;
+// void GetTimeString(LogStream& stream)
+// {
+//     struct timeval tmval;
+//     gettimeofday(&tmval, NULL);
+//     //time_t now = time(NULL);
+//     time_t now = tmval.tv_sec;
+//     if(now != t_lastSecond){
+//         t_lastSecond = now;
     
-        struct tm newTimeObj;
-        struct tm *newTime = localtime_r(&now, &newTimeObj);
-        // 2007-12-25 01:45:32:123456
-        offset = snprintf(t_time,sizeof(t_time), "%4d-%02d-%02d %02d:%02d:%02d:"
-                 , newTime->tm_year + 1900, newTime->tm_mon + 1
-                 , newTime->tm_mday, newTime->tm_hour
-                 , newTime->tm_min, newTime->tm_sec);
+//         struct tm newTimeObj;
+//         struct tm *newTime = localtime_r(&now, &newTimeObj);
+//         // 2007-12-25 01:45:32:123456
+//         offset = snprintf(t_time,sizeof(t_time), "%4d-%02d-%02d %02d:%02d:%02d:"
+//                  , newTime->tm_year + 1900, newTime->tm_mon + 1
+//                  , newTime->tm_mday, newTime->tm_hour
+//                  , newTime->tm_min, newTime->tm_sec);
         
-    }
-    t_time[offset]=0;
-    stream<<t_time<<tmval.tv_usec;
-}
+//     }
+//     t_time[offset]=0;
+//     stream<<t_time<<tmval.tv_usec;
+// }
 
 void GetTimeString(char **timeBuff,size_t* bufflen)
 {

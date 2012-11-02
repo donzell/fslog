@@ -9,7 +9,7 @@ int main(int argc, char *argv[])
     CLogger::init(argv[1]);
     LoggerPtr testlog = CLogger::getLogInstance(argv[2]);
     int i=0;
-    #define padsize 50
+    #define padsize 200
     char *pad=(char*)malloc(padsize);
     assert(pad);                                                                                                                                                                          
     memset(pad,'a',padsize);
@@ -20,9 +20,9 @@ int main(int argc, char *argv[])
     char time_before[32]={0};
     memcpy(time_before,time_str1,len1);
     
-    while ( i++ < 1000000 )
+    while ( i++ < 10000000 )
     {
-//        LOG_WARN(testlog,"%d, pad=%s,desc=%s,msg=%s,counter=%d",i,pad,"test","hello",i);
+//        LOG_WARN(testlog,"%d, pad=%s",i,pad);
         LOG(testlog,WARN)<<i<<", pad="<<pad;
     }
     GetTimeString(&time_str2,&len2);

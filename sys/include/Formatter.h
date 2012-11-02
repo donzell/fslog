@@ -8,30 +8,31 @@
 #include <pthread.h>
 #include "StrUtil.h"
 
-typedef struct format
-{
-    enum{
-        RAW_STR,
-        LOG_INSTANCE,
-        LOG_LEVEL,
-        FILE,
-        LINE,
-        FUNC,
-        PID,
-        TID,
-        TIME,
-        MSG,
-    };
-    
-    int type_;
-    std::string str_;
-}format_t;
 
 class LogStream;
 
 class Formatter
 {
   public:
+    typedef struct format
+    {
+        enum{
+            RAW_STR,
+            LOG_INSTANCE,
+            LOG_LEVEL,
+            FILE,
+            LINE,
+            FUNC,
+            PID,
+            TID,
+            TIME,
+            MSG,
+        };
+        
+        int type_;
+        std::string str_;
+    }format_t;
+    
   Formatter(const std::string& logfmt)
         :logfmt_(logfmt),hasMsg_(false)
     {    
@@ -47,7 +48,7 @@ class Formatter
         _formatAccordingToFormats(stream,logInstance,file,line,func,level,beforeMsgFormats_);
     }
     
-    void Formatter::formatAfterMsg(LogStream& stream,const char* logInstance,const char* file,int line,const char* func,int level)
+    void formatAfterMsg(LogStream& stream,const char* logInstance,const char* file,int line,const char* func,int level)
     {
         if(likely(afterMsgFormats_.empty())){
             return;

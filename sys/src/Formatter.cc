@@ -68,7 +68,7 @@ void Formatter::_formatAccordingToFormats(LogStream& stream,const char* logInsta
                 break;
                 
             default:
-                fprintf(stderr,"fatal error,log met unknown format type!");
+                fprintf(stderr,"%s(%s:%d) fatal error,log met unknown format type!",__func__,__FILE__,__LINE__);
                 abort();
                 break;
         }
@@ -264,7 +264,7 @@ void Formatter::parseFormat()
                     find_pos = pos;
                     break;
                     
-                case 'p':
+                case 't':
                     tmp = logfmt_.substr(pos,use-pos);
                     if(!tmp.empty()){
                         fmt.str_ = tmp;

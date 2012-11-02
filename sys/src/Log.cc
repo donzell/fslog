@@ -62,6 +62,11 @@ int32_t CLogger::init(const string& path)
         async = true;
         fprintf(stderr,"Use Async Logging!\n");
     }
+
+    string splitFormat = conf.getString("log.splitFormat");
+    if(splitFormat.empty()){
+        splitFormat = "_%Y%m%d_%H%M%S_%P_%n";
+    }
     
     vector<string> vec = conf.getStrings("log.instance");
     for(vector<string>::iterator it=vec.begin();it!=vec.end();++it){
@@ -86,10 +91,10 @@ int32_t CLogger::init(const string& path)
             }
             if(appender == NULL){
                 if(async){
-                    appender = new AsyncFileAppender(realPath,splitSize);
+                    appender = new AsyncFileAppender(realPath,splitSize,splitFormat);
                 }
                 else{
-                    appender = new FileAppender(realPath,splitSize);
+                    appender = new FileAppender(realPath,splitSize,splitFormat);
                 }
                 
                 appender->start();

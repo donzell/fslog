@@ -73,8 +73,8 @@ public:
 class AsyncFileAppender:public FileAppender
 {
 public:
-    AsyncFileAppender(const std::string& path,size_t splitSize)
-        :FileAppender(path,splitSize),asyncThread_(AsyncFileAppenderThread::getInstance())
+  AsyncFileAppender(const std::string& path,size_t splitSize,std::string& splitFormat)
+      :FileAppender(path,splitSize,splitFormat),asyncThread_(AsyncFileAppenderThread::getInstance())
         {}
     virtual ~AsyncFileAppender()
         {}
