@@ -23,16 +23,17 @@ public:
     virtual ~Appender()
         {}
 
-    const std::string getAppenderName()const
+    const std::string& getAppenderName()const
         {
             return appenderName_;
         }
     
     /** 
      * log初始化时对一个新的appender调用start.
+     * 注意判断返回值。
      * 
      */
-    virtual void start()=0;
+    virtual bool start()=0;
 
     /** 
      * log销毁时对所关联的appender调用stop.

@@ -97,7 +97,12 @@ int32_t CLogger::init(const string& path)
                     appender = new FileAppender(realPath,splitSize,splitFormat);
                 }
                 
-                appender->start();
+                if(!appender->start()){
+                    delete appender;
+                    fprintf(stderr,"appender start failed!path=%s\n",realPath.c_str());
+                    return -1;
+                }
+                
             }
             appenderMap_.insert(make_pair(realPath,appender));
             logMap_.insert(make_pair(logInstance[0],new CLogger(logInstance[0],appender,logInstance[1],atoi(logInstance[4].c_str()))));

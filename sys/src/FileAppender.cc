@@ -12,8 +12,8 @@
 #include "StrUtil.h"
 using namespace std;
 
-FileAppender::FileAppender(const string& path,uint64_t splitsize,const string& splitFormat,int checkInterval)
-    :Appender(path),path_(path),splitSize_(splitsize),inode_(0),checkInterval_(checkInterval),loopCounter_(0),fd_(-1),splitFormat_(splitFormat)
+FileAppender::FileAppender(const string& path,uint64_t splitsize,const string& splitFormat)
+    :Appender(path),path_(path),splitSize_(splitsize),inode_(0),checkInterval_(10),loopCounter_(0),checkTimeInterval_(1),lastcheck_(0),fd_(-1),splitFormat_(splitFormat)
 {
     reopen();
     if(fd_ < 0){
@@ -274,7 +274,9 @@ void FileAppender::output(const char* msg,size_t len)
 void FileAppender::outputWithoutLock(const char* msg,size_t len)
 {
     // 隔一定次数检查一次是否需要重新打开，每次都检查效率太低.文件切分大小有误差，这个问题不大
-    if(++loopCounter_ >= checkInterval_){
+    time_t now = time(NULL);
+    if(++loopCounter_ >= checkInterval_ || lastcheck_ + checkTimeInterval_ >= now){
+        lastcheck_ = now;
         loopCounter_ = 0;
         checkFile();
     }

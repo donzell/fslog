@@ -35,8 +35,10 @@ public:
     }format_t;
     
     
-    FileAppender(const std::string& path,uint64_t splitsize,const std::string& splitFormat,int checkInterval=10);
-
+    FileAppender(const std::string& path,uint64_t splitsize,const std::string& splitFormat);
+    void setCheckInterval(int times){checkInterval_ = times;}
+    void setCheckTimeInterval(time_t seconds){checkTimeInterval_=seconds;}
+    
     void setSplitSize(uint64_t splitsize){
         if(splitsize <= 0)
             splitSize_ = DEFAULT_SPLITSIZE;
@@ -63,8 +65,10 @@ public:
         {return fd_;}
     
     virtual ~FileAppender();
-    virtual void start()
-        {}
+    virtual bool start()
+        {
+            return true;
+        }
     
     virtual void stop()
         {}
@@ -88,6 +92,8 @@ private:
     uint64_t inode_;
     int checkInterval_;         // 每几次检查一次文件
     int loopCounter_;
+    time_t checkTimeInterval_;  // 每几秒检查一次文件
+    time_t lastcheck_;          // 上次检查时间
     int fd_;
     boost::mutex checkWriteMutex_;    
     std::string splitFormat_;
