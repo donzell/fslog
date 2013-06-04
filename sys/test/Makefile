@@ -2,7 +2,7 @@ AR = ar r
 CXX = g++
 
 INCS += -I../output/include 
-LIBS +=	-L../output/lib -lfslog -lboost_thread -lpthread
+LIBS +=	-L../output/lib -lfslog -lgtest -lboost_thread -lpthread
 
 CXXFLAGS=-pipe -g -fpic -Wall -Wextra -Wconversion -Wno-unused-parameter -Wno-old-style-cast -Woverloaded-virtual -Wpointer-arith -Wshadow -Wwrite-strings -rdynamic $(INCS)
 
