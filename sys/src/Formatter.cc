@@ -8,6 +8,7 @@
 #include <linux/unistd.h>
 #include "Formatter.h"
 #include "Log.h"
+#include "xmemcpy.h"
 using std::string;
 using std::vector;
 
@@ -15,123 +16,118 @@ using std::vector;
 enum {
     INTEGER_STR_MAXLEN=24,
 };
+enum{
+    FMT_RAW_STR=0,
+    FMT_LOG_INSTANCE,
+    FMT_LOG_LEVEL,
+    FMT_FILE,
+    FMT_LINE,
+    FMT_FUNC,
+    FMT_PID,
+    FMT_TID,
+    FMT_TIME,
+    FMT_MSG,
+    FMT_LAST,              /* always last one. */
+};
+
+typedef size_t (*formatter_func)(char* dst,size_t dst_size,const std::string& logInstance,const char* file,int line,const char* func,int level,const char* fmt,va_list args);
+
+static size_t raw_str_func(char* dst,size_t dst_size,const std::string& logInstance,const char* file,int line,const char* func,int level,const char* fmt,va_list args)
+{
+    return 0;
+}
+static inline size_t memcpy_minsize(void* dst,const void* src,size_t dst_size,size_t src_size)
+{
+    size_t copy_size = (dst_size >= src_size ? src_size:dst_size);
+    xmemcpy(dst,src,copy_size);
+    return copy_size;
+}
+static size_t log_instance_func(char* dst,size_t dst_size,const std::string& logInstance,const char* file,int line,const char* func,int level,const char* fmt,va_list args)
+{
+    return memcpy_minsize(dst,logInstance.c_str(),dst_size,logInstance.length());
+}
+static size_t log_level_func(char* dst,size_t dst_size,const std::string& logInstance,const char* file,int line,const char* func,int level,const char* fmt,va_list args)
+{
+    return memcpy_minsize(dst,LEVEL_STR[level],dst_size,strlen(LEVEL_STR[level]));
+}
+static size_t file_func(char* dst,size_t dst_size,const std::string& logInstance,const char* file,int line,const char* func,int level,const char* fmt,va_list args)
+{
+    return memcpy_minsize(dst,file,dst_size,strlen(file));
+}
+static size_t func_func(char* dst,size_t dst_size,const std::string& logInstance,const char* file,int line,const char* func,int level,const char* fmt,va_list args)
+{
+    return memcpy_minsize(dst,func,dst_size,strlen(func));
+}
+static size_t line_func(char* dst,size_t dst_size,const std::string& logInstance,const char* file,int line,const char* func,int level,const char* fmt,va_list args)
+{
+    int lineLen = snprintf(dst,dst_size,"%d",line);
+    if(lineLen < 0){
+        // error.no graceful way to handle this,i think.
+        return 0;
+    }
+    if(static_cast<size_t>(lineLen) >= dst_size){
+        return dst_size;
+    }
+    return static_cast<size_t>(lineLen);
+}
+static size_t pid_func(char* dst,size_t dst_size,const std::string& logInstance,const char* file,int line,const char* func,int level,const char* fmt,va_list args)
+{
+    const char* pid_str = GetPidStr();
+    size_t pidLen = strlen(pid_str);
+    return memcpy_minsize(dst,pid_str,dst_size,pidLen);
+}
+static size_t tid_func(char* dst,size_t dst_size,const std::string& logInstance,const char* file,int line,const char* func,int level,const char* fmt,va_list args)
+{
+    const char* tid_str = GetTidStr();
+    size_t tidLen = strlen(tid_str);
+    return memcpy_minsize(dst,tid_str,dst_size,tidLen);
+}
+static size_t time_func(char* dst,size_t dst_size,const std::string& logInstance,const char* file,int line,const char* func,int level,const char* fmt,va_list args)
+{
+    char *time_str=NULL;
+    size_t timeLen=0;
+    GetTimeString(&time_str,&timeLen);
     
-size_t Formatter::format(char* dst,size_t dst_size,const char* logInstance,const char* file,int line,const char* func,int level,const char* fmt,va_list args)
+    return memcpy_minsize(dst,time_str,dst_size,timeLen);
+}
+static size_t msg_func(char* dst,size_t dst_size,const std::string& logInstance,const char* file,int line,const char* func,int level,const char* fmt,va_list args)
+{
+    int ret = vsnprintf(dst,dst_size,fmt,args);
+    if(ret < 0){
+        return 0;
+    }
+    
+    if(static_cast<size_t>(ret) >= dst_size){
+        return dst_size;
+    }
+    return static_cast<size_t>(ret);
+}
+
+static formatter_func formatter_handler[FMT_LAST]={raw_str_func,
+                                                         log_instance_func,
+                                                         log_level_func,
+                                                         file_func,
+                                                         line_func,
+                                                         func_func,
+                                                         pid_func,
+                                                         tid_func,
+                                                         time_func,
+                                                         msg_func
+};
+
+size_t Formatter::format(char* dst,size_t dst_size,const std::string& logInstance,const char* file,int line,const char* func,int level,const char* fmt,va_list args)
 {
     size_t ret=0;
     for (vector<format_t>::iterator it=formats_.begin(); it != formats_.end(); ++it)
     {
+        assert(it->type_ >= 0 && it->type_ < FMT_LAST);
         assert(ret <= dst_size);
-
-        #define MEMNCPY(dst,src,dstSize,srcSize) do{size_t minLen = (srcSize)<(dstSize)?(srcSize):(dstSize);if(minLen > 0)memcpy(dst,src,minLen);}while(0);
-
-        switch(it->type_){
-            case format_t::RAW_STR:
-                MEMNCPY(dst+ret,it->str_.c_str(),dst_size-ret,it->str_.length());
-                ret += it->str_.length();
-                break;
-                
-            case format_t::LOG_INSTANCE:
-            {
-                MEMNCPY(dst+ret,it->str_.c_str(),dst_size-ret,it->str_.length());
-                ret += it->str_.length();
-                size_t logInstanceLen = strlen(logInstance);
-                MEMNCPY(dst+ret,logInstance,dst_size-ret,logInstanceLen);
-                ret += logInstanceLen;
-                break;
-            }
-            
-            case format_t::LOG_LEVEL:
-            {
-                MEMNCPY(dst+ret,it->str_.c_str(),dst_size-ret,it->str_.length());
-                ret += it->str_.length();
-                size_t levelLen = strlen(LEVEL_STR[level]);
-                MEMNCPY(dst+ret,LEVEL_STR[level],dst_size-ret,levelLen);
-                ret += levelLen;
-                break;
-            }
-            
-            case format_t::FILE:
-            {
-                MEMNCPY(dst+ret,it->str_.c_str(),dst_size-ret,it->str_.length());
-                ret += it->str_.length();
-                size_t fileLen = strlen(file);
-                MEMNCPY(dst+ret,file,dst_size-ret,fileLen);
-                ret += fileLen;
-                break;
-            }
-            
-            case format_t::FUNC:
-            {
-                MEMNCPY(dst+ret,it->str_.c_str(),dst_size-ret,it->str_.length());
-                ret += it->str_.length();
-                size_t funcLen = strlen(func);
-                MEMNCPY(dst+ret,func,dst_size-ret,funcLen);
-                ret += funcLen;
-                
-                break;
-            }
-            
-            case format_t::LINE:
-                MEMNCPY(dst+ret,it->str_.c_str(),dst_size-ret,it->str_.length());
-                ret += it->str_.length();
-                do{
-                    char line_str[INTEGER_STR_MAXLEN]={0};
-                    size_t lineLen = static_cast<size_t>(snprintf(line_str,sizeof(line_str),"%d",line));
-                    MEMNCPY(dst+ret,line_str,dst_size-ret,lineLen);
-                    ret += lineLen;
-                }while(0);
-                break;
-                
-            case format_t::PID:
-                MEMNCPY(dst+ret,it->str_.c_str(),dst_size-ret,it->str_.length());
-                ret += it->str_.length();
-                do{
-                    const char* pid_str = GetPidStr();
-                    size_t pidLen = strlen(pid_str);
-                    MEMNCPY(dst+ret,pid_str,dst_size-ret,pidLen);
-                    ret += pidLen;
-                }while(0);
-                break;
-                
-            case format_t::TID:
-                MEMNCPY(dst+ret,it->str_.c_str(),dst_size-ret,it->str_.length());
-                ret += it->str_.length();
-                do{
-                    const char *tid_str=GetTidStr();
-                    size_t tidLen = strlen(tid_str);
-                    MEMNCPY(dst+ret,tid_str,dst_size-ret,tidLen);
-                    ret += tidLen;
-                }while(0);
-                break;
-                
-            case format_t::TIME:
-                MEMNCPY(dst+ret,it->str_.c_str(),dst_size-ret,it->str_.length());
-                ret += it->str_.length();
-                do{
-                    char *time_str=NULL;
-                    size_t timeLen=0;
-                    GetTimeString(&time_str,&timeLen);
-                    MEMNCPY(dst+ret,time_str,dst_size-ret,timeLen);
-                    ret += timeLen;
-                }while(0);
-                break;
-                
-            case format_t::MSG:
-                MEMNCPY(dst+ret,it->str_.c_str(),dst_size-ret,it->str_.length());
-                ret += it->str_.length();
-                do{
-                    int s_ret = vsnprintf(dst+ret,dst_size-ret,fmt,args);
-                    ret += s_ret;
-                }while(0);
-                break;
-                
-            default:
-                fprintf(stderr,"fatal error,log met unknown format type!");
-                abort();
-                break;
+        ret += memcpy_minsize(dst+ret,it->str_.c_str(),dst_size-ret,it->str_.length());
+        if(ret >= dst_size){
+            break;
         }
         
+        ret += formatter_handler[it->type_](dst+ret,dst_size-ret,logInstance,file,line,func,level,fmt,args);
         if(ret >= dst_size){
             ret = dst_size;
             break;
@@ -159,7 +155,7 @@ void Formatter::parseFormat()
                     if(!tmp.empty()){
                         fmt.str_ = tmp;
                     }
-                    fmt.type_ = format_t::LOG_LEVEL;
+                    fmt.type_ = FMT_LOG_LEVEL;
                     formats_.push_back(fmt);
                     pos = use+2;
                     find_pos = pos;
@@ -171,7 +167,7 @@ void Formatter::parseFormat()
                         fmt.str_ = tmp;
                     }
                     
-                    fmt.type_ = format_t::LOG_INSTANCE;
+                    fmt.type_ = FMT_LOG_INSTANCE;
                     formats_.push_back(fmt);
                     pos = use+2;
                     find_pos = pos;
@@ -183,7 +179,7 @@ void Formatter::parseFormat()
                         fmt.str_ = tmp;
                     }
                     
-                    fmt.type_ = format_t::PID;
+                    fmt.type_ = FMT_PID;
                     formats_.push_back(fmt);
                     pos = use+2;
                     find_pos = pos;
@@ -195,7 +191,7 @@ void Formatter::parseFormat()
                         fmt.str_ = tmp;
                     }
                     
-                    fmt.type_ = format_t::TIME;
+                    fmt.type_ = FMT_TIME;
                     formats_.push_back(fmt);
                     pos = use+2;
                     find_pos = pos;
@@ -207,7 +203,7 @@ void Formatter::parseFormat()
                         fmt.str_ = tmp;
                     }
                     
-                    fmt.type_ = format_t::TID;
+                    fmt.type_ = FMT_TID;
                     formats_.push_back(fmt);
                     pos = use+2;
                     find_pos = pos;
@@ -219,7 +215,7 @@ void Formatter::parseFormat()
                         fmt.str_ = tmp;
                     }
                     
-                    fmt.type_ = format_t::LINE;
+                    fmt.type_ = FMT_LINE;
                     formats_.push_back(fmt);
                     pos = use+2;
                     find_pos = pos;
@@ -231,7 +227,7 @@ void Formatter::parseFormat()
                         fmt.str_ = tmp;
                     }
                     
-                    fmt.type_ = format_t::FILE;
+                    fmt.type_ = FMT_FILE;
                     formats_.push_back(fmt);
                     pos = use+2;
                     find_pos = pos;                    
@@ -243,7 +239,7 @@ void Formatter::parseFormat()
                         fmt.str_ = tmp;
                     }
                     
-                    fmt.type_ = format_t::FUNC;
+                    fmt.type_ = FMT_FUNC;
                     formats_.push_back(fmt);
                     pos = use+2;
                     find_pos = pos;
@@ -255,7 +251,7 @@ void Formatter::parseFormat()
                         fmt.str_ = tmp;
                     }
 
-                    fmt.type_ = format_t::MSG;
+                    fmt.type_ = FMT_MSG;
                     formats_.push_back(fmt);
                     pos = use+2;
                     find_pos = pos;
@@ -269,35 +265,19 @@ void Formatter::parseFormat()
         }
         else{
             //%L %P %M xxx% 最后一个字符就是%
-            fmt.type_ = format_t::RAW_STR;
+            fmt.type_ = FMT_RAW_STR;
             fmt.str_ = logfmt_.substr(pos,logfmt_.length()-pos);
             formats_.push_back(fmt);
             break;
         }
-        
+        // TODO 还没有处理%%的情况，这个不重要，先不处理。
         use = logfmt_.find('%',find_pos);
     }
     format_t fmt;
     // %L %P %M xx 最后是RAW_STR
     if(pos != string::npos){
-        fmt.type_ = format_t::RAW_STR;
+        fmt.type_ = FMT_RAW_STR;
         fmt.str_ = logfmt_.substr(pos,logfmt_.length()-pos);
         formats_.push_back(fmt);
-    }
-    // 复制到两个格式化列表中，分别是%M之前和之后的
-    bool metMsg = false;
-    for (vector<format_t>::iterator it=formats_.begin(); it != formats_.end(); ++it)
-    {
-        if(it->type_ != format_t::MSG){
-            if(!metMsg){
-                beforeMsgFormats_.push_back(*it);
-            }
-            else{
-                    afterMsgFormats_.push_back(*it);
-            }
-        }
-        else{
-            hasMsg_ = true;
-        }
     }
 }

@@ -73,13 +73,8 @@ public:
     virtual void stop()
         {}
     
-    virtual void output(const std::string& msg)
-        {
-            this->output(msg.c_str(),msg.length());
-        }
-    
-    virtual void output(const char* msg,size_t len);
-    void outputWithoutLock(const char* msg,size_t len);
+    virtual void output(char* msg,size_t len);
+    void outputWithoutLock(char* msg,size_t len);
 
     std::string getNewFilename(time_t now,int seqNumber)const;
 private:

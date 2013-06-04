@@ -205,8 +205,17 @@ string FileAppender::getNewFilename(time_t now,int seqNumber)const
 
 void FileAppender::checkFile()
 {
-    // 1.检查当前fd是否还指向log文件，不是则说明被mv或者rm了，重新open(path,O_CREAT|O_WRONLY|O_APPEND,0755)
-    // 2.检查log文件的大小，如果已经超过切分大小，mv，open
+    // 隔一定次数检查一次是否需要重新打开，每次都检查效率太低.文件切分大小有误差，这个问题不大
+    time_t now = time(NULL);
+    if((++loopCounter_ < checkInterval_) && (lastcheck_ + checkTimeInterval_ < now)){
+        return;
+    }
+    
+    lastcheck_ = now;
+    loopCounter_ = 0;
+        
+// 1.检查当前fd是否还指向log文件，不是则说明被mv或者rm了，重新open(path,O_CREAT|O_WRONLY|O_APPEND,0755)
+// 2.检查log文件的大小，如果已经超过切分大小，mv，open
     struct stat buf;
     memset(&buf,0,sizeof(buf));
     
@@ -266,21 +275,19 @@ void FileAppender::checkFile()
     }
 }
 
-void FileAppender::output(const char* msg,size_t len)
+void FileAppender::output(char* msg,size_t len)
 {
-    boost::mutex::scoped_lock guard(checkWriteMutex_);
-    outputWithoutLock(msg,len);
-}
-
-void FileAppender::outputWithoutLock(const char* msg,size_t len)
-{
-    // 隔一定次数检查一次是否需要重新打开，每次都检查效率太低.文件切分大小有误差，这个问题不大
-    time_t now = time(NULL);
-    if(++loopCounter_ >= checkInterval_ || lastcheck_ + checkTimeInterval_ >= now){
-        lastcheck_ = now;
-        loopCounter_ = 0;
+    {
+        boost::mutex::scoped_lock guard(checkWriteMutex_);
         checkFile();
     }
+    ::write(fd_,msg,len);
+}
+
+void FileAppender::outputWithoutLock(char* msg,size_t len)
+{
+    checkFile();
+    
     ssize_t left=len;
     do{
         ssize_t nwrite =  ::write(fd_,msg+(len-left),left);

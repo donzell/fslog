@@ -43,13 +43,12 @@ public:
 
     /** 
      * 主要接口，由Logger前端调用此接口，把格式化好的日志交给appender去输出。
-     * 
+     * 为了减少copy次数，规定msg必须有调用者从堆上malloc，由appender负责free。
      * @param msg 
      * @param len 
      */
-    virtual void output(const char* msg,size_t len)=0;
-    virtual void output(const std::string& msg)=0;
-    
+    virtual void output(char* msg,size_t len)=0;
+
 private:
     std::string appenderName_;
 };

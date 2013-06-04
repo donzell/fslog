@@ -87,7 +87,7 @@ int32_t CLogger::init(const string& path)
             }
             string realPath = toRealPath(logInstance[2],logpath,logInstance[0]+".log");
             assert(!realPath.empty());
-            uint64_t splitSize = strtoul(logInstance[3].c_str(),NULL,10);
+            size_t splitSize = static_cast<size_t>(strtoul(logInstance[3].c_str(),NULL,10));
             Appender* appender = NULL;
             map<string,Appender*>::iterator mapit = appenderMap_.find(realPath);
             if(mapit != appenderMap_.end()){
@@ -163,9 +163,20 @@ void CLogger::writeLog(const string& logName,const char* file,int line,const cha
     }
     msg[msg_len]='\n';
     output(msg,msg_len+1);
+
+    if(level == WARN || level == FATAL){
+        LoggerPtr wfLogger = CLogger::getWfLogInstance();   \
+        if(wfLogger && wfLogger->canLog(level)){
+            Appender* pAppender = wfLogger->getAppender();
+            if(pAppender){
+                pAppender->output(msg,msg_len+1);
+            }
+        }
+    }
+    
 }
 
-void CLogger::output(const char* msg,size_t size)
+void CLogger::output(char* msg,size_t size)
 {
     if(pAppender_){
         pAppender_->output(msg,size);

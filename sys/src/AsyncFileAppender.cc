@@ -30,21 +30,14 @@ void AsyncFileAppender::stop()
     }
 }
 
-void AsyncFileAppender::output(const char* msg,size_t len)
+void AsyncFileAppender::output(char* msg,size_t len)
 {
-    asyncWriteItem_t* pLogItem = new asyncWriteItem_t(this,msg,len);
+    asyncWriteItem_t* pLogItem = new asyncWriteItem_t(msg,len);
     
     boost::mutex::scoped_lock guard(queueMutex_);
     logQueue_.push_back(pLogItem);
 }
 
-void AsyncFileAppender::output(const string& msg)
-{
-    asyncWriteItem_t* pLogItem = new asyncWriteItem_t(this,msg);
-    
-    boost::mutex::scoped_lock guard(queueMutex_);
-    logQueue_.push_back(pLogItem);
-}
 
 void AsyncFileAppender::threadFunc()
 {
@@ -67,7 +60,7 @@ void AsyncFileAppender::threadFunc()
         for(size_t i=0;i<size;i++){
             item = tmpQueue[i];
             if(item){
-                inThreadOutput(item->buffer_.c_str(),item->buffer_.length());
+                inThreadOutput(item->msg,item->len);
                 delete item;
             }
         }
@@ -77,7 +70,7 @@ void AsyncFileAppender::threadFunc()
     pthread_cleanup_pop(1);
 }
 
-void AsyncFileAppender::inThreadOutput(const char* msg,size_t len)
+void AsyncFileAppender::inThreadOutput(char* msg,size_t len)
 {
     FileAppender::outputWithoutLock(msg,len);
 }
@@ -107,7 +100,7 @@ void AsyncFileAppender::dumpQueue()
     for(size_t i=0;i<size;i++){
         item = tmpQueue[i];
         if(item){
-            inThreadOutput(item->buffer_.c_str(),item->buffer_.length());
+            inThreadOutput(item->msg,item->len);
             delete item;
         }
     }

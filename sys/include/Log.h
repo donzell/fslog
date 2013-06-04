@@ -102,7 +102,7 @@ class CLogger:boost::noncopyable
     
     
     void writeLog(const string& logName,const char* file,int line,const char* func,int level,const char* fmt,...)__attribute__((format(printf,7,8)));
-    void output(const char* msg,size_t size);
+    void output(char* msg,size_t size);
 
   private:
     CLogger(const string& logname,Appender* pAppender,const string& fmt,int level);
@@ -136,25 +136,15 @@ class CLogger:boost::noncopyable
 
 #define LOG_FATAL(logger,fmt,...)                                       \
     do{                                                                 \
-        LoggerPtr wfLogger = CLogger::getWfLogInstance();               \
         if(logger && logger->canLog(FATAL))                             \
             logger->writeLog(logger->getLogName(),__FILE__,__LINE__,__func__,FATAL,fmt,##__VA_ARGS__); \
-        if(wfLogger != NULL){                                           \
-            if(wfLogger->canLog(FATAL))                                 \
-                wfLogger->writeLog(logger->getLogName(),__FILE__,__LINE__,__func__,FATAL,fmt,##__VA_ARGS__); \
-        }                                                               \
     }while(0)
 
 
 #define LOG_WARN(logger,fmt,...)                                        \
     do{                                                                 \
-        LoggerPtr wfLogger = CLogger::getWfLogInstance();               \
         if(logger && logger->canLog(WARN))                              \
             logger->writeLog(logger->getLogName(),__FILE__,__LINE__,__func__,WARN,fmt,##__VA_ARGS__); \
-        if(wfLogger != NULL){                                           \
-            if(wfLogger->canLog(FATAL))                                 \
-                wfLogger->writeLog(logger->getLogName(),__FILE__,__LINE__,__func__,FATAL,fmt,##__VA_ARGS__); \
-        }                                                               \
     }                                                                   \
     while(0)
 
