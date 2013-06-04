@@ -8,72 +8,9 @@
 #include <linux/unistd.h>
 #include "Formatter.h"
 #include "Log.h"
-#include "LogStream.h"
 using std::string;
 using std::vector;
 
-
-void Formatter::_formatAccordingToFormats(LogStream& stream,const char* logInstance,const char* file,int line,const char* func,int level,vector<format_t>& formats)
-{    
-    for (vector<format_t>::iterator it=formats.begin(); it != formats.end(); ++it)
-    {
-        switch(it->type_){
-            case format_t::RAW_STR:
-                stream<<it->str_;
-                break;
-                
-            case format_t::LOG_INSTANCE:
-                stream<<it->str_;
-                stream<<logInstance;
-                break;
-            
-            case format_t::LOG_LEVEL:
-                stream<<it->str_;
-                stream<<LEVEL_STR[level];
-                break;
-            
-            case format_t::FILE:
-                stream<<it->str_;
-                stream<<file;
-                break;
-            
-            case format_t::FUNC:
-                stream<<it->str_;
-                stream<<func;
-                break;
-            
-            case format_t::LINE:
-                stream<<it->str_;
-                stream<<line;
-                break;
-                
-            case format_t::PID:
-                stream<<it->str_;
-                stream<<GetPidStr();
-                break;
-                
-            case format_t::TID:
-                stream<<it->str_;
-                stream<<GetTidStr();
-                break;
-                
-            case format_t::TIME:
-                stream<<it->str_;
-                do{
-                    char *time_str=NULL;
-                    size_t timeLen=0;
-                    GetTimeString(&time_str,&timeLen);
-                    stream<<time_str;
-                }while(0);
-                break;
-                
-            default:
-                fprintf(stderr,"%s(%s:%d) fatal error,log met unknown format type!",__func__,__FILE__,__LINE__);
-                abort();
-                break;
-        }
-    }
-}
 
 enum {
     INTEGER_STR_MAXLEN=24,

@@ -18,8 +18,8 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdarg.h>
-#include "boost/noncopyable.hpp"
-#include "boost/thread.hpp"
+#include <boost/noncopyable.hpp>
+#include <boost/thread.hpp>
 #include <vector>
 #include <string>
 #include <map>
@@ -27,7 +27,6 @@
 #include "Appender.h"
 #include "FileAppender.h"
 #include "AsyncFileAppender.h"
-#include "LogStream.h"
 
 using std::map;
 using std::string;
@@ -37,6 +36,7 @@ using std::pair;
 
 class CLogger;
 typedef CLogger* LoggerPtr;
+#define WFLOGINSTANCE "__LOG_WARN_FATLE__"
 
 enum
 {
@@ -78,16 +78,20 @@ class CLogger:boost::noncopyable
      */
     static LoggerPtr getLogInstance(const string& logname);
 
+    static LoggerPtr getWfLogInstance()
+    {
+        return pWfLogger_;
+    }
 
     void setLogLevel(int level){level_ = level;}
     int getLogLevel()const{return level_;}
     inline bool canLog(int level)
-        {return level <= level_;}
+    {return level <= level_;}
     
     void setLogName(const string& logname)
-        {logname_ = logname;}
+    {logname_ = logname;}
     
-    const string getLogName() const {return logname_;}
+    const string& getLogName() const {return logname_;}
     
     Appender* getAppender()const
     {
@@ -97,41 +101,17 @@ class CLogger:boost::noncopyable
     Formatter& getFormatter(){return formatter_;}
     
     
-    void writeLog(const char* file,int line,const char* func,int level,const char* fmt,...)__attribute__((format(printf,6,7)));
+    void writeLog(const string& logName,const char* file,int line,const char* func,int level,const char* fmt,...)__attribute__((format(printf,7,8)));
     void output(const char* msg,size_t size);
-
-    class LogTemp
-    {
-      public:
-      LogTemp(CLogger& logger,Formatter& formatter,const char* file,int line,const char* func,int level)
-          :logger_(logger),formatter_(formatter),file_(file),line_(line),func_(func),level_(level)
-        {
-            formatter_.formatBeforeMsg(stream_,logger_.getLogName().c_str(),file_,line_,func_,level_);
-        }
-        
-        ~LogTemp(){
-            formatter_.formatAfterMsg(stream_,logger_.getLogName().c_str(),file_,line_,func_,level_);
-            stream_.forceAddEndLine();
-            logger_.output(stream_.buffer().data(),stream_.buffer().length());
-        }
-
-        LogStream& getLogStream(){
-            return stream_;
-        }
-        
-      private:
-        CLogger& logger_;
-        Formatter& formatter_;
-        const char* file_;
-        int line_;
-        const char* func_;
-        int level_;
-        LogStream stream_;
-    };
 
   private:
     CLogger(const string& logname,Appender* pAppender,const string& fmt,int level);
     ~CLogger();
+    static void setWfLogInstance(LoggerPtr wfLogger)
+    {
+        pWfLogger_ = wfLogger;
+    }
+    
     static void destroy();
     
 
@@ -151,63 +131,71 @@ class CLogger:boost::noncopyable
     typedef map<string,CLogger*>::iterator  logMapIter;
     static boost::mutex mutex_;
     static map<string,Appender*> appenderMap_;
-
+    static CLogger* pWfLogger_;
 };
-
-#define LOG(logger,level) if(logger && logger->canLog(level)) CLogger::LogTemp(*logger,logger->getFormatter(),__FILE__,__LINE__,__func__,level).getLogStream()
 
 #define LOG_FATAL(logger,fmt,...)                                       \
     do{                                                                 \
-        if(logger && logger->canLog(FATAL))                    \
-            logger->writeLog(__FILE__,__LINE__,__func__,FATAL,fmt,##__VA_ARGS__); \
+        LoggerPtr wfLogger = CLogger::getWfLogInstance();               \
+        if(logger && logger->canLog(FATAL))                             \
+            logger->writeLog(logger->getLogName(),__FILE__,__LINE__,__func__,FATAL,fmt,##__VA_ARGS__); \
+        if(wfLogger != NULL){                                           \
+            if(wfLogger->canLog(FATAL))                                 \
+                wfLogger->writeLog(logger->getLogName(),__FILE__,__LINE__,__func__,FATAL,fmt,##__VA_ARGS__); \
+        }                                                               \
     }while(0)
 
 
 #define LOG_WARN(logger,fmt,...)                                        \
     do{                                                                 \
-        if(logger && logger->canLog(WARN))                    \
-            logger->writeLog(__FILE__,__LINE__,__func__,WARN,fmt,##__VA_ARGS__); \
+        LoggerPtr wfLogger = CLogger::getWfLogInstance();               \
+        if(logger && logger->canLog(WARN))                              \
+            logger->writeLog(logger->getLogName(),__FILE__,__LINE__,__func__,WARN,fmt,##__VA_ARGS__); \
+        if(wfLogger != NULL){                                           \
+            if(wfLogger->canLog(FATAL))                                 \
+                wfLogger->writeLog(logger->getLogName(),__FILE__,__LINE__,__func__,FATAL,fmt,##__VA_ARGS__); \
+        }                                                               \
     }                                                                   \
     while(0)
 
 #define LOG_ERROR(logger,fmt,...)                                       \
     do{                                                                 \
-        if(logger && logger->canLog(ERROR))                    \
-            logger->writeLog(__FILE__,__LINE__,__func__,ERROR,fmt,##__VA_ARGS__); \
+        if(logger && logger->canLog(ERROR))                             \
+            logger->writeLog(logger->getLogName(),__FILE__,__LINE__,__func__,ERROR,fmt,##__VA_ARGS__); \
     }while(0)
 
 
-#define LOG_TRACE(logger,fmt,...)                                        \
+#define LOG_TRACE(logger,fmt,...)                                       \
     do{                                                                 \
-        if(logger && logger->canLog(TRACE))                    \
-            logger->writeLog(__FILE__,__LINE__,__func__,TRACE,fmt,##__VA_ARGS__); \
+        if(logger && logger->canLog(TRACE))                             \
+            logger->writeLog(logger->getLogName(),__FILE__,__LINE__,__func__,TRACE,fmt,##__VA_ARGS__); \
     }                                                                   \
     while(0)
 
-#define LOG_NOTICE(logger,fmt,...)                                        \
+#define LOG_NOTICE(logger,fmt,...)                                      \
     do{                                                                 \
-        if(logger && logger->canLog(NOTICE))                   \
-            logger->writeLog(__FILE__,__LINE__,__func__,NOTICE,fmt,##__VA_ARGS__); \
+        if(logger && logger->canLog(NOTICE))                            \
+            logger->writeLog(logger->getLogName(),__FILE__,__LINE__,__func__,NOTICE,fmt,##__VA_ARGS__); \
     }                                                                   \
     while(0)
 
 #define LOG_LOG(logger,fmt,...)                                         \
     do{                                                                 \
-        if(logger && logger->canLog(LOG))                    \
-            logger->writeLog(__FILE__,__LINE__,__func__,LOG,fmt,##__VA_ARGS__); \
+        if(logger && logger->canLog(LOG))                               \
+            logger->writeLog(logger->getLogName(),__FILE__,__LINE__,__func__,LOG,fmt,##__VA_ARGS__); \
     }while(0)
 
 #define LOG_INFO(logger,fmt,...)                                        \
     do{                                                                 \
-        if(logger && logger->canLog(INFO))                    \
-            logger->writeLog(__FILE__,__LINE__,__func__,INFO,fmt,##__VA_ARGS__); \
+        if(logger && logger->canLog(INFO))                              \
+            logger->writeLog(logger->getLogName(),__FILE__,__LINE__,__func__,INFO,fmt,##__VA_ARGS__); \
     }while(0)
 
 
-#define LOG_DEBUG(logger,fmt,...)                                        \
+#define LOG_DEBUG(logger,fmt,...)                                       \
     do{                                                                 \
-        if(logger && logger->canLog(DEBUG))                    \
-            logger->writeLog(__FILE__,__LINE__,__func__,DEBUG,fmt,##__VA_ARGS__); \
+        if(logger && logger->canLog(DEBUG))                             \
+            logger->writeLog(logger->getLogName(),__FILE__,__LINE__,__func__,DEBUG,fmt,##__VA_ARGS__); \
     }                                                                   \
     while(0)
 

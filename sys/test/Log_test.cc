@@ -22,8 +22,7 @@ int main(int argc, char *argv[])
     
     while ( i++ < 10000000 )
     {
-//        LOG_WARN(testlog,"%d, pad=%s",i,pad);
-        LOG(testlog,WARN)<<i<<", pad="<<pad;
+        LOG_WARN(testlog,"%d, pad=%s",i,pad);
     }
     GetTimeString(&time_str2,&len2);
     cout<<time_before<<"==>"<<time_str2<<endl;

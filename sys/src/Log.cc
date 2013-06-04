@@ -81,6 +81,10 @@ int32_t CLogger::init(const string& path)
         // log.instance:instanceName,format,filename,rollsize,level
         // log.instance:xmpp,%L %T %P %f(%l):%F %m,xmpp.log,20000000,7
         if(logInstance.size()>=5){
+            if(logMap_.find(logInstance[0]) != logMap_.end()){
+                fprintf(stderr,"duplicated log.instance found.config=%s",it->c_str());
+                exit(1);
+            }
             string realPath = toRealPath(logInstance[2],logpath,logInstance[0]+".log");
             assert(!realPath.empty());
             uint64_t splitSize = strtoul(logInstance[3].c_str(),NULL,10);
@@ -102,18 +106,23 @@ int32_t CLogger::init(const string& path)
                     fprintf(stderr,"appender start failed!path=%s\n",realPath.c_str());
                     return -1;
                 }
-                
+                appenderMap_.insert(make_pair(realPath,appender));
             }
-            appenderMap_.insert(make_pair(realPath,appender));
             logMap_.insert(make_pair(logInstance[0],new CLogger(logInstance[0],appender,logInstance[1],atoi(logInstance[4].c_str()))));
             fprintf(stderr,"one instance configged.str=%s\n",it->c_str());
         }
         else{
-            fprintf(stderr,"You have wrong log.instance config format. Please check. str=%s\n",it->c_str());
-            continue;
+            fprintf(stderr,"You have wrong log.instance config format. Please check. config=%s\n",it->c_str());
+            exit(1);
         }
         
     }
+
+    logMapIter wfIt = logMap_.find(WFLOGINSTANCE);
+    if(wfIt != logMap_.end()){
+        setWfLogInstance(wfIt->second);
+    }
+    
     ::atexit(CLogger::destroy);
     return 0;
 }
@@ -142,12 +151,12 @@ LoggerPtr CLogger::getLogInstance(const string& logname)
     return NULL;
 }
 
-void CLogger::writeLog(const char* file,int line,const char* func,int level,const char* fmt,...)
+void CLogger::writeLog(const string& logName,const char* file,int line,const char* func,int level,const char* fmt,...)
 {
     char msg[MAX_SIZE_PER_LOG+1];
     va_list args;
     va_start(args,fmt);
-    size_t msg_len = formatter_.format(msg,MAX_SIZE_PER_LOG,logname_.c_str(),file,line,func,level,fmt,args);
+    size_t msg_len = formatter_.format(msg,MAX_SIZE_PER_LOG,logName.c_str(),file,line,func,level,fmt,args);
     va_end(args);
     if(msg_len > MAX_SIZE_PER_LOG){ // see format or snprintf().
         msg_len = MAX_SIZE_PER_LOG;
@@ -167,6 +176,7 @@ void CLogger::output(const char* msg,size_t size)
 map<string,LoggerPtr> CLogger::logMap_;
 boost::mutex CLogger::mutex_;
 map<string,Appender*> CLogger::appenderMap_;
+LoggerPtr CLogger::pWfLogger_;
 
 const char* LEVEL_STR[LEVEL_ALL]={
     "FATAL","WARN","ERROR","NOTICE","TRACE","LOG","INFO","DEBUG",
