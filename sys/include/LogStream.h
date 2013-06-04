@@ -5,7 +5,7 @@
 #include <string.h> // memcpy
 #include <string>
 
-#include <boost/noncopyable.hpp>
+#include "boost/noncopyable.hpp"
 
 namespace detail
 {

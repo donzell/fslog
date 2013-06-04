@@ -18,8 +18,8 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdarg.h>
-#include <boost/noncopyable.hpp>
-#include <boost/thread.hpp>
+#include "boost/noncopyable.hpp"
+#include "boost/thread.hpp"
 #include <vector>
 #include <string>
 #include <map>

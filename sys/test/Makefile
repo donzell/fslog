@@ -1,8 +1,8 @@
 AR = ar r
 CXX = g++
 
-INCS += -I../output/include 
-LIBS +=	-L../output/lib -lfslog -lgtest -lboost_thread -lpthread
+INCS += -I../output/include
+LIBS +=	-lgtest -L../output/lib -lfslog -lboost_thread -lpthread
 
 CXXFLAGS=-pipe -g -fpic -Wall -Wextra -Wconversion -Wno-unused-parameter -Wno-old-style-cast -Woverloaded-virtual -Wpointer-arith -Wshadow -Wwrite-strings -rdynamic $(INCS)
 
@@ -18,6 +18,7 @@ all: $(BINS)
 clean:
 	rm -f $(OBJS) $(BINS)
 
-$(BINS):$(OBJS)
+$(BINS):%:%.o
 	$(CXX) -o $@ $^ $(LIBS)
+
 

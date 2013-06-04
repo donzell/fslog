@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <vector>
 #include <map>
-#include <boost/thread.hpp>
+#include "boost/thread.hpp"
 #include "Appender.h"
 
 class FileAppender:public Appender

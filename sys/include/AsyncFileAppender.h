@@ -4,9 +4,9 @@
 #include <string>
 #include <vector>
 #include <pthread.h>
-#include <boost/thread.hpp>
-#include <boost/scoped_ptr.hpp>
-#include <boost/noncopyable.hpp>
+#include "boost/thread.hpp"
+#include "boost/scoped_ptr.hpp"
+#include "boost/noncopyable.hpp"
 #include "FileAppender.h"
 
 class AsyncFileAppender;
