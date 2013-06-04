@@ -7,8 +7,10 @@
 #include <stdint.h>
 #include <stdio.h>
 
+// We can't suppress this warning on the command line as not all GCC versions support -Wno-type-limits :
+#if defined(__GNUC__) && (__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 4))
 #pragma GCC diagnostic ignored "-Wtype-limits"
-//#pragma GCC diagnostic error "-Wtype-limits"
+#endif
 
 namespace detail
 {

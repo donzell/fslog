@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <string.h>
 #include <stdio.h>
 #include <sys/stat.h>
@@ -280,5 +281,16 @@ void FileAppender::outputWithoutLock(const char* msg,size_t len)
         loopCounter_ = 0;
         checkFile();
     }
-    ::write(fd_,msg,len);
+    ssize_t left=len;
+    do{
+        ssize_t nwrite =  ::write(fd_,msg+(len-left),left);
+        if(nwrite >= 0){
+            left -= nwrite;
+        }
+        else{
+            // error.
+            fprintf(stderr,"error=write_fail logger=%s filepath=%s fd=%d errno=%d log=%s\n",this->getAppenderName().c_str(),path_.c_str(),fd_,errno,msg);
+            break;
+        }
+    }while(left>0);
 }
