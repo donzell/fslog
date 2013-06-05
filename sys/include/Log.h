@@ -134,55 +134,64 @@ class CLogger:boost::noncopyable
     static CLogger* pWfLogger_;
 };
 
-#define LOG_FATAL(logger,fmt,...)                                       \
+#define LOGGER_FATAL(logger,fmt,...)                                    \
     do{                                                                 \
-        if(logger && logger->canLog(FATAL))                             \
+        LoggerPtr wfLogger = CLogger::getWfLogInstance();               \
+        if(wfLogger && wfLogger->canLog(level)){                        \
             logger->writeLog(logger->getLogName(),__FILE__,__LINE__,__func__,FATAL,fmt,##__VA_ARGS__); \
+        }                                                               \
+        if(logger && logger->canLog(FATAL)){                            \
+            logger->writeLog(logger->getLogName(),__FILE__,__LINE__,__func__,FATAL,fmt,##__VA_ARGS__); \
+        }                                                               \
     }while(0)
 
 
-#define LOG_WARN(logger,fmt,...)                                        \
+#define LOGGER_WARN(logger,fmt,...)                                     \
     do{                                                                 \
-        if(logger && logger->canLog(WARN))                              \
+        LoggerPtr wfLogger = CLogger::getWfLogInstance();               \
+        if(wfLogger && wfLogger->canLog(level)){                        \
+            logger->writeLog(logger->getLogName(),__FILE__,__LINE__,__func__,FATAL,fmt,##__VA_ARGS__); \
+        }                                                               \
+        if(logger && logger->canLog(WARN)){                             \
             logger->writeLog(logger->getLogName(),__FILE__,__LINE__,__func__,WARN,fmt,##__VA_ARGS__); \
-    }                                                                   \
-    while(0)
+        }                                                               \
+    }while(0)
 
-#define LOG_ERROR(logger,fmt,...)                                       \
+#define LOGGER_ERROR(logger,fmt,...)                                    \
     do{                                                                 \
         if(logger && logger->canLog(ERROR))                             \
             logger->writeLog(logger->getLogName(),__FILE__,__LINE__,__func__,ERROR,fmt,##__VA_ARGS__); \
     }while(0)
 
 
-#define LOG_TRACE(logger,fmt,...)                                       \
+#define LOGGER_TRACE(logger,fmt,...)                                    \
     do{                                                                 \
         if(logger && logger->canLog(TRACE))                             \
             logger->writeLog(logger->getLogName(),__FILE__,__LINE__,__func__,TRACE,fmt,##__VA_ARGS__); \
     }                                                                   \
     while(0)
 
-#define LOG_NOTICE(logger,fmt,...)                                      \
+#define LOGGER_NOTICE(logger,fmt,...)                                   \
     do{                                                                 \
         if(logger && logger->canLog(NOTICE))                            \
             logger->writeLog(logger->getLogName(),__FILE__,__LINE__,__func__,NOTICE,fmt,##__VA_ARGS__); \
     }                                                                   \
     while(0)
 
-#define LOG_LOG(logger,fmt,...)                                         \
+#define LOGGER_LOG(logger,fmt,...)                                      \
     do{                                                                 \
         if(logger && logger->canLog(LOG))                               \
             logger->writeLog(logger->getLogName(),__FILE__,__LINE__,__func__,LOG,fmt,##__VA_ARGS__); \
     }while(0)
 
-#define LOG_INFO(logger,fmt,...)                                        \
+#define LOGGER_INFO(logger,fmt,...)                                     \
     do{                                                                 \
         if(logger && logger->canLog(INFO))                              \
             logger->writeLog(logger->getLogName(),__FILE__,__LINE__,__func__,INFO,fmt,##__VA_ARGS__); \
     }while(0)
 
 
-#define LOG_DEBUG(logger,fmt,...)                                       \
+#define LOGGER_DEBUG(logger,fmt,...)                                    \
     do{                                                                 \
         if(logger && logger->canLog(DEBUG))                             \
             logger->writeLog(logger->getLogName(),__FILE__,__LINE__,__func__,DEBUG,fmt,##__VA_ARGS__); \
