@@ -29,6 +29,11 @@ enum{
     FMT_MSG,
     FMT_LAST,              /* always last one. */
 };
+enum{
+    DETAIL_FMT=1,
+    MIDDLE_FMT,
+    SIMPLE_FMT,
+};
 
 typedef size_t (*formatter_func)(char* dst,size_t dst_size,const std::string& logInstance,const char* file,int line,const char* func,int level,const char* fmt,va_list args);
 
@@ -115,8 +120,90 @@ static formatter_func formatter_handler[FMT_LAST]={raw_str_func,
                                                          msg_func
 };
 
+typedef size_t (*special_format_func)(char* dst,size_t dst_size,const std::string& logInstance,const char* file,int line,const char* func,int level,const char* fmt,va_list args);
+static std::map<string,special_format_func > special_format_func_map;
+size_t detail_format(char* dst,size_t dst_size,const std::string& logInstance,const char* file,int line,const char* func,int level,const char* fmt,va_list args)
+{
+    //%L %N %T %P:%t %f(%F:%l) %M
+    char *time_str=NULL;
+    size_t timeLen=0;
+    GetTimeString(&time_str,&timeLen);
+    int ret = snprintf(dst,dst_size,"%s %s %s %s:%s %s(%s:%d) ",LEVEL_STR[level],logInstance.c_str(),time_str,GetPidStr(),GetTidStr(),func,file,line);
+    if(ret <= 0){
+        return 0;
+    }
+    if(static_cast<size_t>(ret) >= dst_size){
+        return dst_size;
+    }
+    int msg_len = vsnprintf(dst+ret,dst_size-ret,fmt,args);
+    if(msg_len < 0){
+        return ret;
+    }
+    if(static_cast<size_t>(msg_len +ret) >= dst_size){
+        return dst_size;
+    }
+    return static_cast<size_t>(ret+msg_len);
+}
+
+size_t middle_format(char* dst,size_t dst_size,const std::string& logInstance,const char* file,int line,const char* func,int level,const char* fmt,va_list args)
+{
+    //%L %T %P %f(%F:%l) %M    
+    char *time_str=NULL;
+    size_t timeLen=0;
+    GetTimeString(&time_str,&timeLen);
+    int ret = snprintf(dst,dst_size,"%s %s %s %s(%s:%d) ",LEVEL_STR[level],time_str,GetPidStr(),func,file,line);
+    if(ret <= 0){
+        return 0;
+    }
+    if(static_cast<size_t>(ret) >= dst_size){
+        return dst_size;
+    }
+    int msg_len = vsnprintf(dst+ret,dst_size-ret,fmt,args);
+    if(msg_len < 0){
+        return ret;
+    }
+    if(static_cast<size_t>(msg_len +ret) >= dst_size){
+        return dst_size;
+    }
+    return static_cast<size_t>(ret+msg_len);
+}
+
+size_t simple_format(char* dst,size_t dst_size,const std::string& logInstance,const char* file,int line,const char* func,int level,const char* fmt,va_list args)
+{
+    //%L %T %P %F:%l %M
+    char *time_str=NULL;
+    size_t timeLen=0;
+    GetTimeString(&time_str,&timeLen);
+    int ret = snprintf(dst,dst_size,"%s %s %s %s:%d ",LEVEL_STR[level],time_str,GetPidStr(),file,line);
+    if(ret <= 0){
+        return 0;
+    }
+    if(static_cast<size_t>(ret) >= dst_size){
+        return dst_size;
+    }
+    int msg_len = vsnprintf(dst+ret,dst_size-ret,fmt,args);
+    if(msg_len < 0){
+        return ret;
+    }
+    if(static_cast<size_t>(msg_len +ret) >= dst_size){
+        return dst_size;
+    }
+    return static_cast<size_t>(ret+msg_len);
+}
+
+// 返回dst_size大小说明最后一个字节是0
 size_t Formatter::format(char* dst,size_t dst_size,const std::string& logInstance,const char* file,int line,const char* func,int level,const char* fmt,va_list args)
 {
+    if(special_format_ == DETAIL_FMT){
+        return detail_format(dst,dst_size,logInstance,file,line,func,level,fmt,args);
+    }
+    if(special_format_ == MIDDLE_FMT){
+        return middle_format(dst,dst_size,logInstance,file,line,func,level,fmt,args);
+    }
+    if(special_format_ == SIMPLE_FMT){
+        return simple_format(dst,dst_size,logInstance,file,line,func,level,fmt,args);
+    }
+    
     size_t ret=0;
     for (vector<format_t>::iterator it=formats_.begin(); it != formats_.end(); ++it)
     {
@@ -280,4 +367,21 @@ void Formatter::parseFormat()
         fmt.str_ = logfmt_.substr(pos,logfmt_.length()-pos);
         formats_.push_back(fmt);
     }
+
+    //%L %N %T %P:%t %f(%F:%l) %M
+    //%L %T %P %f(%F:%l) %M
+    //%L %T %P %F:%l %M
+    if(logfmt_ == "%L %N %T %P:%t %f(%F:%l) %M"){
+        special_format_ = DETAIL_FMT;
+    }
+    else if(logfmt_ == "%L %T %P %f(%F:%l) %M"){
+        special_format_ = MIDDLE_FMT;
+    }
+    else if(logfmt_ == "%L %T %P %F:%l %M"){
+        special_format_ = SIMPLE_FMT;
+    }
+    else{
+        special_format_ = -1;
+    }
+    
 }

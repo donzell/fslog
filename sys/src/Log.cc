@@ -165,7 +165,6 @@ void CLogger::writeLog(const string& logName,const char* file,int line,const cha
     }
     msg[msg_len]='\n';
     output(msg,msg_len+1);
-
 }
 
 void CLogger::output(char* msg,size_t size)

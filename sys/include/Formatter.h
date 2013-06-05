@@ -19,7 +19,7 @@ class Formatter
 {
   public:
   Formatter(const std::string& logfmt)
-      :logfmt_(logfmt)
+      :logfmt_(logfmt),special_format_(-1)
     {    
         parseFormat();
     }
@@ -35,6 +35,7 @@ class Formatter
     
     std::string logfmt_;
     std::vector<format_t> formats_;
+    int special_format_;
 };
     
 
