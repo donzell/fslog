@@ -282,6 +282,7 @@ void FileAppender::output(char* msg,size_t len)
         checkFile();
     }
     ::write(fd_,msg,len);
+    free(msg);
 }
 
 void FileAppender::outputWithoutLock(char* msg,size_t len)
