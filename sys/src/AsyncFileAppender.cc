@@ -1,6 +1,7 @@
 #include "AsyncFileAppender.h"
 #include "boost/scoped_ptr.hpp"
 #include "boost/bind.hpp"
+#include "StrUtil.h"
 using std::string;
 using std::vector;
 
@@ -47,10 +48,10 @@ void AsyncFileAppender::threadFunc()
     while(asyncRunning_){
         item = NULL;
         vector<asyncWriteItem_t*> tmpQueue;
+        logQueue_.reserve(5120000);
         {
             boost::mutex::scoped_lock guard(queueMutex_);
             tmpQueue.swap(logQueue_);
-            logQueue_.reserve(512);
         }
         // if(tmpQueue.empty()){
         //     pthread_timed_wait();
@@ -72,7 +73,9 @@ void AsyncFileAppender::threadFunc()
 
 void AsyncFileAppender::inThreadOutput(char* msg,size_t len)
 {
+    UpdateCurrentTm();
     FileAppender::outputWithoutLock(msg,len);
+    ClearCurrentTm();
 }
 
 void AsyncFileAppender::s_dumpQueue(void* arg)

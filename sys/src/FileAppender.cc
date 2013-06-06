@@ -206,7 +206,9 @@ string FileAppender::getNewFilename(time_t now,int seqNumber)const
 void FileAppender::checkFile()
 {
     // 隔一定次数检查一次是否需要重新打开，每次都检查效率太低.文件切分大小有误差，这个问题不大
-    time_t now = time(NULL);
+    struct timeval* tm = TestSetCurrentTm();    
+    time_t now = tm->tv_sec;
+    
 //    if((++loopCounter_ < checkInterval_) && (lastcheck_ + checkTimeInterval_ < now)){
 //        return;
 //    }
@@ -280,11 +282,12 @@ void FileAppender::checkFile()
 
 void FileAppender::output(char* msg,size_t len)
 {
-    {
-        boost::mutex::scoped_lock guard(checkWriteMutex_);
-        checkFile();
-    }
-//    ::write(fd_,msg,len);
+   {
+       boost::mutex::scoped_lock guard(checkWriteMutex_);
+       checkFile();
+   }
+    
+    ::write(fd_,msg,len);
     free(msg);
 }
 

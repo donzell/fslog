@@ -4,7 +4,7 @@
 #include <vector>
 #include <string>
 #include <sys/types.h>
-
+#include <sys/time.h>
 #define likely(x) __builtin_expect(!!(x),1)
 #define unlikely(x) __builtin_expect(!!(x),0)
 
@@ -36,5 +36,10 @@ void GetTimeString(char** time_str,size_t *len);
 void GetTimeStringForFileName(char *timeBuff,size_t bufflen);
 const char* GetPidStr();
 const char* GetTidStr();
+
+void UpdateCurrentTm();
+void ClearCurrentTm();
+struct timeval* TestSetCurrentTm();
+
 
 #endif /* _STRUTIL_H_ */

@@ -225,6 +225,26 @@ __thread time_t t_lastSecond;
 __thread char t_time[32];
 __thread int offset;
 
+/* format，checkfile都会获取时间，我想把其中一个省下来。在接口中传递时间显得接口不够纯洁。
+ * 接口中不能暴露实现细节，我在此处用线程局部存储存放时间，一条log先format，再output，如果实现output的那个appender需要使用时间，直接用就行了.
+ * 异步appender就算了，它单独的线程，需要自己获取时间*/
+__thread struct timeval _tm;
+
+void UpdateCurrentTm()
+{
+    gettimeofday(&_tm,NULL);
+}
+void ClearCurrentTm()
+{
+    memset(&_tm,0,sizeof(_tm));
+}
+struct timeval* TestSetCurrentTm()
+{
+    if(_tm.tv_sec == 0){
+        UpdateCurrentTm();
+    }
+    return &_tm;
+}
 // void GetTimeString(LogStream& stream)
 // {
 //     struct timeval tmval;
@@ -249,10 +269,8 @@ __thread int offset;
 
 void GetTimeString(char **timeBuff,size_t* bufflen)
 {
-    struct timeval tmval;
-    gettimeofday(&tmval, NULL);
-    //time_t now = time(NULL);
-    time_t now = tmval.tv_sec;
+    struct timeval* tm = TestSetCurrentTm();
+    time_t now = tm->tv_sec;
     if(now != t_lastSecond){
         t_lastSecond = now;
     
@@ -265,7 +283,7 @@ void GetTimeString(char **timeBuff,size_t* bufflen)
                  , newTime->tm_min, newTime->tm_sec);
         
     }
-    int ret = snprintf(t_time+offset,sizeof(t_time)-offset,"%06ld",static_cast<long>(tmval.tv_usec));
+    int ret = snprintf(t_time+offset,sizeof(t_time)-offset,"%06ld",static_cast<long>(tm->tv_usec));
     *timeBuff = t_time;
     *bufflen = static_cast<size_t>(offset+ret);
 }
@@ -283,7 +301,6 @@ void GetTimeStringForFileName(char* timeBuff,size_t bufflen)
     // 2007-12-25-01
     snprintf(timeBuff,bufflen, "%4d-%02d-%02d-%02d",newTime->tm_year + 1900,newTime->tm_mon + 1,newTime->tm_mday,newTime->tm_hour);
 }
-
 
 static pid_t _pid;
 static char _pidStr[32];

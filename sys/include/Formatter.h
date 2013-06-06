@@ -28,7 +28,7 @@ class Formatter
     {}
 
     /* return would format if size enough.if retval >= sizeof(outputstr),str is truncated. */
-    size_t format(char* dst,size_t dst_size,const std::string& logInstance,const char* file,int line,const char* func,int level,const char* fmt,va_list args);
+    size_t format(char* dst,size_t dst_size,const char* logInstance,const char* file,int line,const char* func,int level,const char* fmt,va_list args);
 
   private:
     void parseFormat();

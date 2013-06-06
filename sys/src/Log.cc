@@ -5,14 +5,20 @@
 using namespace std;
 
 CLogger::CLogger(const string& logname,Appender* pAppender,const string& fmt,int level)
-    :logname_(logname),formatter_(fmt),level_(level),pAppender_(pAppender)
+    :logname_(NULL),formatter_(fmt),level_(level),pAppender_(pAppender)
 {
+    logname_ = strdup(logname.c_str());
+    assert(logname_);
 }
 
 CLogger::~CLogger()
 {
     if(pAppender_){
         pAppender_->stop();
+    }
+    if(logname_){
+        free(logname_);
+        logname_ = NULL;
     }
 }
 
@@ -151,20 +157,25 @@ LoggerPtr CLogger::getLogInstance(const string& logname)
     return NULL;
 }
 
-void CLogger::writeLog(const string& logName,const char* file,int line,const char* func,int level,const char* fmt,...)
+void CLogger::writeLog(const char* file,int line,const char* func,int level,const char* fmt,...)
 {
     char* msg = (char*)malloc(MAX_SIZE_PER_LOG);
     if(!msg) return;
+
+    UpdateCurrentTm();
     
     va_list args;
     va_start(args,fmt);
-    size_t msg_len = formatter_.format(msg,MAX_SIZE_PER_LOG,logName.c_str(),file,line,func,level,fmt,args);
+    size_t msg_len=0;
+    msg_len = formatter_.format(msg,MAX_SIZE_PER_LOG,logname_,file,line,func,level,fmt,args);
     va_end(args);
     if(msg_len >= MAX_SIZE_PER_LOG){ // see format or snprintf().
         msg_len = MAX_SIZE_PER_LOG-1; // '\n' need one byte.
     }
     msg[msg_len]='\n';
     output(msg,msg_len+1);
+
+    ClearCurrentTm();
 }
 
 void CLogger::output(char* msg,size_t size)
