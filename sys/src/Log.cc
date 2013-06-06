@@ -46,6 +46,10 @@ vector<string> CLogger::splitCheck(const string& instance)
 
 int32_t CLogger::init(const string& path)
 {
+    // level = NONE,nothing can log.
+    dummyLogger = new CLogger("",NULL,"",NONE);
+    assert(dummyLogger);
+    
     if(unlikely(!logMap_.empty())){
         fprintf(stderr,"Logger is already inited!!!\n");
         return -1;
@@ -128,6 +132,9 @@ int32_t CLogger::init(const string& path)
     if(wfIt != logMap_.end()){
         setWfLogInstance(wfIt->second);
     }
+    else{
+        setWfLogInstance(dummyLogger);
+    }
     
     ::atexit(CLogger::destroy);
     return 0;
@@ -147,14 +154,14 @@ void CLogger::destroy()
     appenderMap_.clear();
 }
 
-LoggerPtr CLogger::getLogInstance(const string& logname)
+CLogger& CLogger::GetInstance(const string& logname)
 {
     boost::mutex::scoped_lock guard(mutex_);
     logMapIter it = logMap_.find(logname);
     if(it != logMap_.end()){
-        return it->second;
+        return *it->second;
     }
-    return NULL;
+    return *dummyLogger;
 }
 
 void CLogger::writeLog(const char* file,int line,const char* func,int level,const char* fmt,...)
@@ -185,6 +192,7 @@ void CLogger::output(char* msg,size_t size)
     }
 }
 
+CLogger* CLogger::dummyLogger;
 
 map<string,LoggerPtr> CLogger::logMap_;
 boost::mutex CLogger::mutex_;

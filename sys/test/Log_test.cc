@@ -3,15 +3,14 @@
 #include "StrUtil.h"
 #include <iostream>
 using namespace std;
+#define padsize 200
 
-int main(int argc, char *argv[])
+void* routine(void* arg)
 {
-    CLogger::init(argv[1]);
-    LoggerPtr testlog = CLogger::getLogInstance(argv[2]);
+    char* instance = (char*)arg;
+    CLogger& testlog = CLogger::GetInstance(instance);
     int i=0;
-    #define padsize 200
-    char *pad=(char*)malloc(padsize);
-    assert(pad);                                                                                                                                                                          
+    char pad[padsize];
     memset(pad,'a',padsize);
     pad[padsize-1]=0;
     char* time_str1,*time_str2;
@@ -25,7 +24,18 @@ int main(int argc, char *argv[])
         LOGGER_NOTICE(testlog,"%d, pad=%s",i,pad);
     }
     GetTimeString(&time_str2,&len2);
-    cout<<time_before<<"==>"<<time_str2<<endl;
+    cout<<pthread_self()<<" "<<time_before<<"==>"<<time_str2<<endl;
+    
+    return NULL;
+}
+
+int main(int argc, char *argv[])
+{
+    CLogger::init(argv[1]);
+    pthread_t tid;
+    pthread_create(&tid,NULL,routine,argv[2]);
+    routine(argv[2]);
+    pthread_join(tid,NULL);
     
     return 0;
 }

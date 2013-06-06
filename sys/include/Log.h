@@ -40,7 +40,8 @@ typedef CLogger* LoggerPtr;
 
 enum
 {
-    FATAL=0,
+    NONE=0,
+    FATAL,
     WARN,
     ERROR,
     NOTICE,
@@ -48,7 +49,7 @@ enum
     LOG,
     INFO,
     DEBUG,
-    LEVEL_ALL,
+    LEVEL_ALL=100,
 };
 
 extern const char* LEVEL_STR[LEVEL_ALL];
@@ -76,11 +77,11 @@ class CLogger:boost::noncopyable
      * 
      * @return 
      */
-    static LoggerPtr getLogInstance(const string& logname);
+    static CLogger&  GetInstance(const string& logname);
 
-    static LoggerPtr getWfLogInstance()
+    static CLogger& getWfLogInstance()
     {
-        return pWfLogger_;
+        return *pWfLogger_;
     }
 
     void setLogLevel(int level){level_ = level;}
@@ -132,6 +133,8 @@ class CLogger:boost::noncopyable
     Formatter formatter_;
     volatile int level_;
     Appender* pAppender_;
+
+    static CLogger* dummyLogger;
     
     static map<string,CLogger*> logMap_;
     typedef map<string,CLogger*>::iterator  logMapIter;
@@ -144,10 +147,10 @@ class CLogger:boost::noncopyable
     do{                                                                 \
         LoggerPtr wfLogger = CLogger::getWfLogInstance();               \
         if(wfLogger && wfLogger->canLog(level)){                        \
-            logger->writeLog(__FILE__,__LINE__,__func__,FATAL,fmt,##__VA_ARGS__); \
+            wfLogger->writeLog(__FILE__,__LINE__,__func__,FATAL,fmt,##__VA_ARGS__); \
         }                                                               \
-        if(logger && logger->canLog(FATAL)){                            \
-            logger->writeLog(__FILE__,__LINE__,__func__,FATAL,fmt,##__VA_ARGS__); \
+        if(logger.canLog(FATAL)){                            \
+            logger.writeLog(__FILE__,__LINE__,__func__,FATAL,fmt,##__VA_ARGS__); \
         }                                                               \
     }while(0)
 
@@ -156,51 +159,51 @@ class CLogger:boost::noncopyable
     do{                                                                 \
         LoggerPtr wfLogger = CLogger::getWfLogInstance();               \
         if(wfLogger && wfLogger->canLog(level)){                        \
-            logger->writeLog(,__FILE__,__LINE__,__func__,FATAL,fmt,##__VA_ARGS__); \
+            wfLogger->writeLog(,__FILE__,__LINE__,__func__,FATAL,fmt,##__VA_ARGS__); \
         }                                                               \
-        if(logger && logger->canLog(WARN)){                             \
-            logger->writeLog(,__FILE__,__LINE__,__func__,WARN,fmt,##__VA_ARGS__); \
+        if(logger.canLog(WARN)){                             \
+            logger.writeLog(,__FILE__,__LINE__,__func__,WARN,fmt,##__VA_ARGS__); \
         }                                                               \
     }while(0)
 
 #define LOGGER_ERROR(logger,fmt,...)                                    \
     do{                                                                 \
-        if(logger && logger->canLog(ERROR))                             \
-            logger->writeLog(__FILE__,__LINE__,__func__,ERROR,fmt,##__VA_ARGS__); \
+        if(logger.canLog(ERROR))                             \
+            logger.writeLog(__FILE__,__LINE__,__func__,ERROR,fmt,##__VA_ARGS__); \
     }while(0)
 
 
 #define LOGGER_TRACE(logger,fmt,...)                                    \
     do{                                                                 \
-        if(logger && logger->canLog(TRACE))                             \
-            logger->writeLog(__FILE__,__LINE__,__func__,TRACE,fmt,##__VA_ARGS__); \
+        if(logger.canLog(TRACE))                             \
+            logger.writeLog(__FILE__,__LINE__,__func__,TRACE,fmt,##__VA_ARGS__); \
     }                                                                   \
     while(0)
 
 #define LOGGER_NOTICE(logger,fmt,...)                                   \
     do{                                                                 \
-        if(logger && logger->canLog(NOTICE))                            \
-            logger->writeLog(__FILE__,__LINE__,__func__,NOTICE,fmt,##__VA_ARGS__); \
+        if(logger.canLog(NOTICE))                            \
+            logger.writeLog(__FILE__,__LINE__,__func__,NOTICE,fmt,##__VA_ARGS__); \
     }                                                                   \
     while(0)
 
 #define LOGGER_LOG(logger,fmt,...)                                      \
     do{                                                                 \
-        if(logger && logger->canLog(LOG))                               \
-            logger->writeLog(__FILE__,__LINE__,__func__,LOG,fmt,##__VA_ARGS__); \
+        if(logger.canLog(LOG))                               \
+            logger.writeLog(__FILE__,__LINE__,__func__,LOG,fmt,##__VA_ARGS__); \
     }while(0)
 
 #define LOGGER_INFO(logger,fmt,...)                                     \
     do{                                                                 \
-        if(logger && logger->canLog(INFO))                              \
-            logger->writeLog(__FILE__,__LINE__,__func__,INFO,fmt,##__VA_ARGS__); \
+        if(logger.canLog(INFO))                              \
+            logger.writeLog(__FILE__,__LINE__,__func__,INFO,fmt,##__VA_ARGS__); \
     }while(0)
 
 
 #define LOGGER_DEBUG(logger,fmt,...)                                    \
     do{                                                                 \
-        if(logger && logger->canLog(DEBUG))                             \
-            logger->writeLog(__FILE__,__LINE__,__func__,DEBUG,fmt,##__VA_ARGS__); \
+        if(logger.canLog(DEBUG))                             \
+            logger.writeLog(__FILE__,__LINE__,__func__,DEBUG,fmt,##__VA_ARGS__); \
     }                                                                   \
     while(0)
 
