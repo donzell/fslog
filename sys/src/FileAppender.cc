@@ -212,7 +212,7 @@ void FileAppender::checkFile()
 //    if((++loopCounter_ < checkInterval_) && (lastcheck_ + checkTimeInterval_ < now)){
 //        return;
 //    }
-    if(lastcheck_ + checkTimeInterval_ < now){
+    if(lastcheck_ + checkTimeInterval_ > now){
         return;
     }
     
