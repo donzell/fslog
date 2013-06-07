@@ -13,29 +13,32 @@
 #include "StrUtil.h"
 using namespace std;
 
+
+static inline void CreateDir(std::string &path) {
+    std::string::size_type off = 0;
+
+    while ((off = path.find("/", off)) != std::string::npos)  {
+        char backup = path[off];
+        
+        path[off] = 0;
+        mkdir(path.c_str(), 0755);
+        path[off] = backup;
+        
+        ++ off;
+    }
+}
+
 FileAppender::FileAppender(const string& path,uint64_t splitsize,const string& splitFormat)
-    :Appender(path),path_(path),splitSize_(splitsize),inode_(0),checkInterval_(10),loopCounter_(0),checkTimeInterval_(1),lastcheck_(0),fd_(-1),splitFormat_(splitFormat)
+    :Appender(path),path_(path),splitSize_(splitsize),checkTimeInterval_(1),lastcheck_(0),fd_(-1),splitFormat_(splitFormat)
 {
-    reopen();
+    CreateDir(path_);
+    fd_ = open(path_.c_str(), O_CREAT | O_WRONLY | O_LARGEFILE, 0755);
     if(fd_ < 0){
-        // 只会尝试创建缺少的单级目录.比如/home/work/log/test.log，只会尝试创建log目录
-        struct stat st;
-        if(stat(path_.c_str(),&st) < 0){
-            size_t pos = path_.rfind("/");
-            string dirpath;
-            if(pos != string::npos){
-                dirpath = path_.substr(0,pos);
-            }
-            if(!dirpath.empty() && stat(dirpath.c_str(),&st) < 0){
-                mkdir(dirpath.c_str(),0777);
-            }
-        }
-        reopen();
+        // 先占个坑，虽然我现在无法打开文件，比如因为路径权限问题，我先把日志刷到stderr
+        // 运行过程中人工修改路径权限，我又能打开文件了，那时候checkFile过程中，fd_原子性指向新文件，我就能写了
+        fd_ = dup(2);
     }
     
-    struct stat buf;
-    fstat(fd_,&buf);
-    inode_ = buf.st_ino;
     if(splitSize_ <= 0){
         splitSize_ = DEFAULT_SPLITSIZE;
     }
@@ -117,15 +120,19 @@ FileAppender::~FileAppender()
 
 void FileAppender::reopen()
 {
-    // int fd = ::open(path_.c_str(),O_CREAT|O_WRONLY|O_APPEND,0755);
-    // int oldFd = __sync_lock_test_and_set(&fd_,fd);
-    // if(oldFd >= 0)
-    //     ::close(oldFd);
-    // }
-    if(fd_ >= 0){
-        ::close(fd_);
+    // if fd == -1,没有效果，也没有任何副作用。fd_将仍然指向旧文件。下次检查还会发现inode变化，继续尝试。
+    // 如果open正在操作目标fd，也就是open返回fd_一样的数值，dup2返回 EBUSY。但是因为我们保证了fd_始终有效，open必然不会返回fd_一样的数值。所以dup要么成功，要么因为fd==-1而失败，如上所说，fd=-1没有影响。
+    // dup2是原子的。利用这一点，我们不用多线程加锁了，这一技巧来自淘宝的开源tbcommon-utils中的tblog，感谢多隆大神。
+
+    int fd = open(path_.c_str(), O_CREAT | O_WRONLY | O_LARGEFILE, 0755);
+    if(fd < 0 && errno == ENOENT){
+        CreateDir(path_);
+        fd = open(path_.c_str(), O_CREAT | O_WRONLY | O_LARGEFILE, 0755);
     }
-    fd_ = ::open(path_.c_str(),O_CREAT|O_WRONLY|O_APPEND,0755);
+    dup2(fd, fd_);
+    close(fd);
+
+    // 还有一点要说明，同一个进程，多次open同一个文件，每次fd不同。幸亏是这样，否则如果文件一样fd就一样的话，fd=open();close(fd);多线程并发情况下，我们可能会多次close同一个fd，而这个fd在两次close之间有可能被open成了其他设备，甚至可能是一个网络fd，那就悲剧了。
 }
 
 string FileAppender::getNewFilename(time_t now,int seqNumber)const
@@ -203,61 +210,47 @@ string FileAppender::getNewFilename(time_t now,int seqNumber)const
     return stream.str();
 }
 
+
 void FileAppender::checkFile()
 {
     // 隔一定次数检查一次是否需要重新打开，每次都检查效率太低.文件切分大小有误差，这个问题不大
     struct timeval* tm = TestSetCurrentTm();    
     time_t now = tm->tv_sec;
-    
-//    if((++loopCounter_ < checkInterval_) && (lastcheck_ + checkTimeInterval_ < now)){
-//        return;
-//    }
-    if(lastcheck_ + checkTimeInterval_ > now){
-        return;
+    {
+        // 此处用原子操作也可实现。当前我厂gcc/g++版本陈旧，没有__sync_lock_test_and_set这种高级货色
+        // linux自带的atomic还不够。我也不想用汇编搞一段，那个有损移植性.
+        boost::mutex::scoped_lock guard(checkMutex_);
+        if(lastcheck_ + checkTimeInterval_ > now){
+            return;
+        }
+        lastcheck_ = now;
     }
     
-    lastcheck_ = now;
-    loopCounter_ = 0;
         
 // 1.检查当前fd是否还指向log文件，不是则说明被mv或者rm了，重新open(path,O_CREAT|O_WRONLY|O_APPEND,0755)
 // 2.检查log文件的大小，如果已经超过切分大小，mv，open
-    struct stat buf;
-    memset(&buf,0,sizeof(buf));
-    
-    if(::stat(path_.c_str(),&buf) < 0){
-        // 不应该没有权限，除非用户主动对文件或目录chmod了
-        // 可能文件刚被mv，还没来得及create，这个应该很少见
-        reopen();
-        return;
-    }
-    
-    
-    if(fd_ < 0 || inode_ != buf.st_ino){
-        uint64_t saved_ino = buf.st_ino;
-        
-        // fd < 0，或者inode已经变了，重新打开
-        reopen();
-        if(fd_ >= 0){
-            struct stat dbuf;
-            if(fstat(fd_,&dbuf) < 0){
-                // 怎么会呢?
-                inode_ = saved_ino;
-            }
-            else{
-                inode_ = dbuf.st_ino;
-            }
-        }
-        else{
-            reopen();
-        }
-        return;
-    }
+    struct stat stFile={0};
+    struct stat stFd={0};
 
-    if(static_cast<uint64_t>(buf.st_size) >= splitSize_){
+    // 第一次保证打开日志文件获取有效fd_.之后只有成功open了新文件才会dup到fd_上去。保证fd_一直是有效的。
+    fstat(fd_, &stFd);
+    int err = stat(path_.c_str(), &stFile);
+    if ((err == -1 && errno == ENOENT)
+        || (err == 0 && (stFile.st_dev != stFd.st_dev || stFile.st_ino != stFd.st_ino))) {
+
+        // 仔细阅读reopen说明。
+        reopen();
+        
+        // 再次stat，获取文件信息供检查使用
+        if((err = stat(path_.c_str(),&stFile)) < 0){
+            return;
+        }
+    }
+    
+    if(err == 0 && static_cast<uint64_t>(stFile.st_size) >= splitSize_){
         // mv reopen.
         string newFileName;
         bool foundFileName=false;//是否找到一个可用的文件名
-        time_t now=time(NULL);
         for (int surfix = 0; surfix < 1000; ++surfix)
         {
             newFileName=getNewFilename(now,surfix);
@@ -282,10 +275,7 @@ void FileAppender::checkFile()
 
 void FileAppender::output(char* msg,size_t len)
 {
-   {
-       boost::mutex::scoped_lock guard(checkWriteMutex_);
-       checkFile();
-   }
+    checkFile();
     
     ::write(fd_,msg,len);
     free(msg);

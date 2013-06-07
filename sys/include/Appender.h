@@ -1,7 +1,7 @@
 #ifndef _APPENDER_H_
 #define _APPENDER_H_
 #include <string>
-#include "boost/noncopyable.hpp"
+#include <boost/noncopyable.hpp>
 
 /**
  * @file   Appender.h

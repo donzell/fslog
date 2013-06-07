@@ -3,7 +3,7 @@
 #include "StrUtil.h"
 #include <iostream>
 using namespace std;
-#define padsize 200
+#define padsize 100
 
 void* routine(void* arg)
 {
@@ -31,11 +31,25 @@ void* routine(void* arg)
 
 int main(int argc, char *argv[])
 {
-    CLogger::init(argv[1]);
+    if(argc != 4){
+        cout<<argv[0]<<" conf logInstance threadNum.\nExample:"<<argv[0]<<" testlog.conf test 2"<<endl;
+        return -1;
+    }
+    
+    int threadNum = atoi(argv[3]);
+    
+    cout<<"init="<<CLogger::init(argv[1])<<endl;
+    vector<pthread_t> tids;
     pthread_t tid;
-    pthread_create(&tid,NULL,routine,argv[2]);
+    
+    for(int i=0;i<threadNum;i++){
+        pthread_create(&tid,NULL,routine,argv[2]);
+        tids.push_back(tid);
+    }
+    
     routine(argv[2]);
-    pthread_join(tid,NULL);
+    for(int i=0;i<threadNum;i++)
+        pthread_join(tids[i],NULL);
     
     return 0;
 }

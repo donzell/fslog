@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <vector>
 #include <map>
-#include "boost/thread.hpp"
+#include <boost/thread.hpp>
 #include "Appender.h"
 
 class FileAppender:public Appender
@@ -36,7 +36,6 @@ public:
     
     
     FileAppender(const std::string& path,uint64_t splitsize,const std::string& splitFormat);
-    void setCheckInterval(int times){checkInterval_ = times;}
     void setCheckTimeInterval(time_t seconds){checkTimeInterval_=seconds;}
     
     void setSplitSize(uint64_t splitsize){
@@ -65,9 +64,11 @@ public:
         {return fd_;}
     
     virtual ~FileAppender();
+    
     virtual bool start()
         {
-            return true;
+            // 如果没能成功打开日志文件，这里返回失败。我们要保证一直持有一个有效fd。
+            return (fd_ >= 0);
         }
     
     virtual void stop()
@@ -80,22 +81,18 @@ public:
 private:
     void parseSplitFormat();
     void generateSplitFormatCharMap();
-
     
     std::string path_;
     uint64_t splitSize_;
-    uint64_t inode_;
-    int checkInterval_;         // 每几次检查一次文件
-    int loopCounter_;
+    boost::mutex checkMutex_;
     time_t checkTimeInterval_;  // 每几秒检查一次文件
     time_t lastcheck_;          // 上次检查时间
     int fd_;
-    boost::mutex checkWriteMutex_;    
     std::string splitFormat_;
     std::vector<format_t> formats_;
     typedef std::map<char,int> charToFormatMap;
     charToFormatMap formatsCharMap_;
-
+    
 };
 
 #endif /* _FILEAPPENDER_H_ */

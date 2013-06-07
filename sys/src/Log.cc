@@ -112,9 +112,7 @@ int32_t CLogger::init(const string& path)
                 }
                 
                 if(!appender->start()){
-                    delete appender;
                     fprintf(stderr,"appender start failed!path=%s\n",realPath.c_str());
-                    return -1;
                 }
                 appenderMap_.insert(make_pair(realPath,appender));
             }
