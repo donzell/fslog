@@ -229,9 +229,11 @@ void FileAppender::checkFile()
         
 // 1.检查当前fd是否还指向log文件，不是则说明被mv或者rm了，重新open(path,O_CREAT|O_WRONLY|O_APPEND,0755)
 // 2.检查log文件的大小，如果已经超过切分大小，mv，open
-    struct stat stFile={0};
-    struct stat stFd={0};
-
+    struct stat stFile;
+    struct stat stFd;
+    memset(&stFd,0,sizeof(stFd));
+    memset(&stFile,0,sizeof(stFile));
+    
     // 第一次保证打开日志文件获取有效fd_.之后只有成功open了新文件才会dup到fd_上去。保证fd_一直是有效的。
     fstat(fd_, &stFd);
     int err = stat(path_.c_str(), &stFile);
