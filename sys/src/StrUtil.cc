@@ -61,7 +61,18 @@ static char *_realpath (const char *name, char *resolved)
 
     if (name[0] != '/')
     {
-        if (!getcwd (rpath, path_max))
+        if(name[0] == '~'){
+            char *homepath = getenv("HOME");
+            if(homepath){
+                int len = strlen(homepath);
+                if(len >= path_max){
+                    goto error;
+                }
+                strcpy(rpath,homepath);
+            }
+            name = name+1;
+        }
+        else if (!getcwd (rpath, path_max))
         {
             rpath[0] = '\0';
             goto error;
@@ -177,7 +188,7 @@ string toRealPath(const string& oldpath,const string& prefix,const string& defau
         tmp+=strDefaultFilename;
     }
     
-    if(tmp[0]!='/' && tmp[0]!='.'){
+    if(tmp[0]!='/' && tmp[0]!='.' && tmp[0]!='~'){
         tmp = (*(realPrefix.end()-1)=='/' ? realPrefix+tmp : realPrefix+"/"+tmp);
     }
     char *absPathBuff = _realpath(tmp.c_str(),NULL);
