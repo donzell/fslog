@@ -198,5 +198,5 @@ map<string,Appender*> CLogger::appenderMap_;
 LoggerPtr CLogger::pWfLogger_;
 
 const char* LEVEL_STR[LEVEL_ALL]={
-    "FATAL","WARN","ERROR","NOTICE","TRACE","LOG","INFO","DEBUG",
+    "NONE","FATAL","WARN","ERROR","NOTICE","TRACE","LOG","INFO","DEBUG",
 };
