@@ -92,6 +92,7 @@ private:
     std::vector<format_t> formats_;
     typedef std::map<char,int> charToFormatMap;
     charToFormatMap formatsCharMap_;
+    boost::mutex splitMutex_;
     
 };
 

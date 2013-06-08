@@ -242,11 +242,8 @@ void FileAppender::checkFile()
 
         // 仔细阅读reopen说明。
         reopen();
-        
-        // 再次stat，获取文件信息供检查使用
-        if((err = stat(path_.c_str(),&stFile)) < 0){
-            return;
-        }
+        // 如果这次已经触发了reopen,这次可以不要再检查了。
+        return;
     }
     
     if(err == 0 && static_cast<uint64_t>(stFile.st_size) >= splitSize_){
@@ -261,17 +258,29 @@ void FileAppender::checkFile()
                 foundFileName=true;
                 break;          // 找到一个不存在的文件名
             }
-            // 注意上面的检查文件是否存在和这个rename不是原子操作，可能在这个时间窗口内被人为的创建出来一个重名的文件，但是程序本身不会，因为newFileName是加了pid的。概率实在非常非常小了，可以忽略。
         }
         // rename,reopen
         if(foundFileName){
-            rename(path_.c_str(),newFileName.c_str());
-            reopen();
+            boost::mutex::scoped_lock guard(splitMutex_);
+            struct stat stAgain;
+            if(stat(path_.c_str(),&stAgain) == 0 && stAgain.st_dev == stFile.st_dev && stAgain.st_ino == stFile.st_ino){
+                // 文件还是那个文件，我可以操作。要是文件已经变了，说明别人刚好切过了，这就是典型的double-check啊。
+                // 多线程情况下，可能两个线程同时走到这里，两次rename可能把刚rename出来的文件覆盖掉，日志就丢了。
+                // 但是mutex仍然无法阻挡多进程同时rotate。如果要解决多进程的问题，必然引入fcntl文件锁或者system v sem信号量
+                // 他们是目前唯一能在进程退出时自动清理锁的方式。然而fcntl依赖于一个公共锁文件，万一人工误操作把文件清理掉了，
+                // 像我们自动清理线上日志经常是find . -ctime +15 |xargs rm.这时候就非常麻烦了；system v 信号量，根据unpv2的描述，
+                // 创建和初始化不是一个原子的，目前也没有完美的方式解决只让一个进程初始化，其他进程等初始化完了再使用的方法。甚至刚创建完进程退了，别人永远也无法等到初始化完成。
+                // 总之，支持多进程互斥的文件切分非常麻烦和困难，也许有靠谱的方案，但是我觉得得不偿失。
+                // 其实，如果程序是多进程的，那么我们只要把切分文件的格式中添加%P，即进程号加入，就可以保证进程间切文件绝对不会相互覆盖。如此简单而已。
+                
+                rename(path_.c_str(),newFileName.c_str());
+                reopen();
+            }
         }
         else{
             // shit,试了1000次居然都被占用了，只好继续打到原来的文件，过一会再尝试切分，那时时间变了，或许有可用文件名了
             // do nothing
-        }        
+        }
     }
 }
 
