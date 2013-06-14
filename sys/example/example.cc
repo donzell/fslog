@@ -1,5 +1,5 @@
 #include  "Log.h"
-
+#include <unistd.h>
 #include <iostream>
 using namespace std;
 
@@ -26,9 +26,10 @@ int main(int argc, char *argv[])
 
     // 应该使用且仅使用这一组宏打日志。日志中需要的time,func,那一坨信息，他们要不要打，都是在配置里指定的！
     // 不是定死的，你可以定义自己的日志格式。看example.conf配置说明吧。
-    
+
+    fork();// test fork,multi-process.multi-process should not be used together with multi-thread.
     LOGGER_NOTICE(logger,"%s %d","hello",1);
-    
+    fork();// test fork,multi-process.multi-process should not be used together with multi-thread.    
 
     func();
     

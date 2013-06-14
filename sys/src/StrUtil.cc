@@ -1,7 +1,6 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <limits.h>
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -10,7 +9,15 @@
 #include <stdio.h>
 #include <sys/time.h>
 #include "StrUtil.h"
-//#include "LogStream.h"
+
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+#include <unistd.h>
+// gettid is linux specific,not portable.but gettid is better than pthread_self in readability.
+#include <sys/syscall.h>
+#include <sys/types.h>
+
 using namespace std;
 
 enum{
@@ -64,7 +71,7 @@ static char *_realpath (const char *name, char *resolved)
         if(name[0] == '~'){
             char *homepath = getenv("HOME");
             if(homepath){
-                int len = strlen(homepath);
+                int len = static_cast<int>(strlen(homepath));
                 if(len >= path_max){
                     goto error;
                 }
@@ -318,14 +325,17 @@ static char _pidStr[32];
 
 static pthread_once_t _getpidOnce = PTHREAD_ONCE_INIT;
 static __thread char _tidStr[32];
-static __thread pthread_t _tid;
+static __thread pid_t _tid;
 
 static void fork_prepare()
 {}
 static void fork_child()
 {
-    _pid = getpid();
+    _pid = static_cast<typeof(_pid)>(getpid());
     snprintf(_pidStr,sizeof(_pidStr),"%d",_pid);
+    // also fix tid. can only work under single-thread.we don't support fork with multi-thread!
+    _tid = static_cast<typeof(_tid)>(syscall(SYS_gettid));
+    snprintf(_tidStr,sizeof(_tidStr),"%d",_tid);
 }
 static void fork_parent()
 {}
@@ -347,7 +357,7 @@ const char* GetTidStr()
     if(likely(_tid)){
         return _tidStr;
     }
-    _tid = pthread_self();
-    snprintf(_tidStr,sizeof(_tidStr),"%ld",_tid);
+    _tid = static_cast<typeof(_tid)>(syscall(SYS_gettid));
+    snprintf(_tidStr,sizeof(_tidStr),"%d",_tid);
     return _tidStr;
 }
