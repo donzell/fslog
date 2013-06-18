@@ -36,7 +36,7 @@ FileAppender::FileAppender(const string& path,uint64_t splitsize,const string& s
     if(fd_ < 0){
         // 先占个坑，虽然我现在无法打开文件，比如因为路径权限问题，我先把日志刷到stderr
         // 运行过程中人工修改路径权限，我又能打开文件了，那时候checkFile过程中，fd_原子性指向新文件，我就能写了
-        fd_ = dup(2);
+        fd_ = dup(fileno(stderr));
     }
     
     if(splitSize_ <= 0){
