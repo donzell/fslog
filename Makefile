@@ -3,7 +3,7 @@ CXX = g++
 
 INCS += -Iinclude
 
-CXXFLAGS=-pipe -g -fpic -Wall -Wextra -Wconversion -Wno-unused-parameter -Wno-old-style-cast -Woverloaded-virtual -Wpointer-arith -Wwrite-strings $(INCS)
+CXXFLAGS=-g -fpic -Wall -Wextra -Wconversion -Wno-unused-parameter -Wno-old-style-cast -Woverloaded-virtual -Wpointer-arith -Wwrite-strings $(INCS)
 SOURCES = $(wildcard src/*.cc)
 OBJS=${SOURCES:%.cc=%.o}
 LIBRARY_DIST=libfslog.a
