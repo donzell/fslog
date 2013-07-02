@@ -154,7 +154,7 @@ string FileAppender::getNewFilename(time_t now,int seqNumber)const
                 break;
                 
             case format_t::YEAR:
-                snprintf(tmpStr,sizeof(tmpStr),"%4d",newTimeObj.tm_year+1900);
+                snprintf(tmpStr,sizeof(tmpStr),"%04d",newTimeObj.tm_year+1900);
                 stream<<it->str_;
                 stream<<tmpStr;
                 break;
