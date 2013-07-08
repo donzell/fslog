@@ -1,6 +1,6 @@
 /**
  * @file   Log.h
- * @author wudongzheng01 <donzell.wu@gmail.com>
+ * @author donzell <donzell.wu@gmail.com>
  * @date   Sat Sep 22 20:42:59 2012
  * 
  * @brief  小型简单的日志库，能够按大小切分日志，支持多线程、多进程写同一个日志文件，尽可能的高效，不要让Log成为性能瓶颈。
@@ -51,7 +51,6 @@ enum
     DEBUG,
     LEVEL_ALL=100,
 };
-
 extern const char* LEVEL_STR[LEVEL_ALL];
 
 
@@ -107,7 +106,7 @@ class CLogger:boost::noncopyable
     
     Formatter& getFormatter(){return formatter_;}
     
-    
+    void writeLog(const char* file,int line,const char* func,int level,const char* fmt,va_list args);
     void writeLog(const char* file,int line,const char* func,int level,const char* fmt,...)__attribute__((format(printf,6,7)));
     void output(char* msg,size_t size);
 
