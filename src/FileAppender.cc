@@ -288,7 +288,8 @@ void FileAppender::output(char* msg,size_t len)
 {
     checkFile();
     
-    ::write(fd_,msg,len);
+    ssize_t ret = ::write(fd_,msg,len);
+    (void)ret;
     free(msg);
 }
 

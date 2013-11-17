@@ -5,7 +5,7 @@
 
 /**
  * @file   Appender.h
- * @author wudongzheng01 <donzell.wu@gmail.com>
+ * @author donzell <donzell.wu@gmail.com>
  * @date   Sun Oct 14 20:17:24 2012
  * 
  * @brief  接口类，所有的appender继承于此,同步文件Appender，异步文件Appender.

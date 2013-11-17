@@ -1,6 +1,6 @@
 /**
  * @file   Conf.h
- * @author wudongzheng01 <donzell.wu@gmail.com>
+ * @author donzell <donzell.wu@gmail.com>
  * @date   Thu Sep 27 15:36:23 2012
  * 
  * @brief  简单的key-value配置解析。因为时配置解析，一般只会程序启动时执行一次，所以不用关注效率。
