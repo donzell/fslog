@@ -8,7 +8,6 @@
 #include <linux/unistd.h>
 #include "Formatter.h"
 #include "Log.h"
-#include "xmemcpy.h"
 using std::string;
 using std::vector;
 
@@ -45,7 +44,7 @@ static size_t raw_str_func(char* dst,size_t dst_size,const std::string& logInsta
 static inline size_t memcpy_minsize(void* dst,const void* src,size_t dst_size,size_t src_size)
 {
     size_t copy_size = (dst_size >= src_size ? src_size:dst_size);
-    xmemcpy(dst,src,copy_size);
+    memcpy(dst,src,copy_size);
     return copy_size;
 }
 static size_t log_instance_func(char* dst,size_t dst_size,const std::string& logInstance,const char* file,int line,const char* func,int level,const char* fmt,va_list args)
