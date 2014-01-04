@@ -27,6 +27,7 @@
 #include "Appender.h"
 #include "FileAppender.h"
 #include "AsyncFileAppender.h"
+#include "Atomic.h"
 
 using std::map;
 using std::string;
@@ -148,7 +149,7 @@ class CLogger:boost::noncopyable
         if(wfLogger && wfLogger->canLog(level)){                        \
             wfLogger->writeLog(__FILE__,__LINE__,__func__,FATAL,fmt,##__VA_ARGS__); \
         }                                                               \
-        if(logger.canLog(FATAL)){                            \
+        if(logger.canLog(FATAL)){                                       \
             logger.writeLog(__FILE__,__LINE__,__func__,FATAL,fmt,##__VA_ARGS__); \
         }                                                               \
     }while(0)
@@ -160,50 +161,88 @@ class CLogger:boost::noncopyable
         if(wfLogger && wfLogger->canLog(level)){                        \
             wfLogger->writeLog(,__FILE__,__LINE__,__func__,FATAL,fmt,##__VA_ARGS__); \
         }                                                               \
-        if(logger.canLog(WARN)){                             \
+        if(logger.canLog(WARN)){                                        \
             logger.writeLog(,__FILE__,__LINE__,__func__,WARN,fmt,##__VA_ARGS__); \
         }                                                               \
     }while(0)
 
 #define LOGGER_ERROR(logger,fmt,...)                                    \
     do{                                                                 \
-        if(logger.canLog(ERROR))                             \
+        if(logger.canLog(ERROR))                                        \
             logger.writeLog(__FILE__,__LINE__,__func__,ERROR,fmt,##__VA_ARGS__); \
     }while(0)
 
 
 #define LOGGER_TRACE(logger,fmt,...)                                    \
     do{                                                                 \
-        if(logger.canLog(TRACE))                             \
+        if(logger.canLog(TRACE))                                        \
             logger.writeLog(__FILE__,__LINE__,__func__,TRACE,fmt,##__VA_ARGS__); \
     }                                                                   \
     while(0)
 
 #define LOGGER_NOTICE(logger,fmt,...)                                   \
     do{                                                                 \
-        if(logger.canLog(NOTICE))                            \
+        if(logger.canLog(NOTICE))                                       \
             logger.writeLog(__FILE__,__LINE__,__func__,NOTICE,fmt,##__VA_ARGS__); \
     }                                                                   \
     while(0)
 
 #define LOGGER_LOG(logger,fmt,...)                                      \
     do{                                                                 \
-        if(logger.canLog(LOG))                               \
+        if(logger.canLog(LOG))                                          \
             logger.writeLog(__FILE__,__LINE__,__func__,LOG,fmt,##__VA_ARGS__); \
     }while(0)
 
 #define LOGGER_INFO(logger,fmt,...)                                     \
     do{                                                                 \
-        if(logger.canLog(INFO))                              \
+        if(logger.canLog(INFO))                                         \
             logger.writeLog(__FILE__,__LINE__,__func__,INFO,fmt,##__VA_ARGS__); \
     }while(0)
 
 
 #define LOGGER_DEBUG(logger,fmt,...)                                    \
     do{                                                                 \
-        if(logger.canLog(DEBUG))                             \
+        if(logger.canLog(DEBUG))                                        \
             logger.writeLog(__FILE__,__LINE__,__func__,DEBUG,fmt,##__VA_ARGS__); \
     }                                                                   \
     while(0)
+
+#define LOGGER_X_IF(logger, condition, level, fmt, ...)                 \
+    do {                                                                \
+        if (condition)                                                  \
+            if (logger.canLog(level))                                   \
+                logger.writeLog(__FILE__, __LINE__, __func__, level, fmt, ##__VA_ARGS__); \
+    }                                                                   \
+    while (0)
+
+#define LOGGER_X_EVERY_N(logger, n, level, fmt, ...)                    \
+    do {                                                                \
+        if (logger.canLog(level)){                                      \
+            static AtomicInt64 counter;                                 \
+            if (counter.increment() % static_cast<int64_t>(n) == 0)     \
+                logger.writeLog(__FILE__, __LINE__, __func__, level, fmt, ##__VA_ARGS__); \
+        }                                                               \
+    }                                                                   \
+    while (0)
+
+
+#define LOGGER_FATAL_EVERY_N(logger, n, fmt, ...) LOGGER_X_EVERY_N(logger, n, FATAL, fmt, ##__VA_ARGS__)
+#define LOGGER_WARN_EVERY_N(logger, n, fmt, ...) LOGGER_X_EVERY_N(logger, n, WARN, fmt, ##__VA_ARGS__)
+#define LOGGER_ERROR_EVERY_N(logger, n, fmt, ...) LOGGER_X_EVERY_N(logger, n, ERROR, fmt, ##__VA_ARGS__)
+#define LOGGER_NOTICE_EVERY_N(logger, n, fmt, ...) LOGGER_X_EVERY_N(logger, n, NOTICE, fmt, ##__VA_ARGS__)
+#define LOGGER_TRACE_EVERY_N(logger, n, fmt, ...) LOGGER_X_EVERY_N(logger, n, TRACE, fmt, ##__VA_ARGS__)
+#define LOGGER_LOG__EVERY_N(logger, n, fmt, ...) LOGGER_X_EVERY_N(logger, n, LOG, fmt, ##__VA_ARGS__)
+#define LOGGER_INFO_EVERY_N(logger, n, fmt, ...) LOGGER_X_EVERY_N(logger, n, INFO, fmt, ##__VA_ARGS__)
+#define LOGGER_DEBUG_EVERY_N(logger, n, fmt, ...) LOGGER_X_EVERY_N(logger, n, DEBUG, fmt, ##__VA_ARGS__)
+
+#define LOGGER_FATAL_IF(logger, condition, fmt, ...) LOGGER_X_IF(logger, condition, FATAL, fmt, ##__VA_ARGS__)
+#define LOGGER_WARN_IF(logger, condition, fmt, ...) LOGGER_X_IF(logger, condition, WARN, fmt, ##__VA_ARGS__)
+#define LOGGER_ERROR_IF(logger, condition, fmt, ...) LOGGER_X_IF(logger, condition, ERROR, fmt, ##__VA_ARGS__)
+#define LOGGER_NOTICE_IF(logger, condition, fmt, ...) LOGGER_X_IF(logger, condition, NOTICE, fmt, ##__VA_ARGS__)
+#define LOGGER_TRACE_IF(logger, condition, fmt, ...) LOGGER_X_IF(logger, condition, TRACE, fmt, ##__VA_ARGS__)
+#define LOGGER_LOG_IF(logger, condition, fmt, ...) LOGGER_X_IF(logger, condition, LOG, fmt, ##__VA_ARGS__)
+#define LOGGER_INFO_IF(logger, condition, fmt, ...) LOGGER_X_IF(logger, condition, INFO, fmt, ##__VA_ARGS__)
+#define LOGGER_DEBUG_IF(logger, condition, fmt, ...) LOGGER_X_IF(logger, condition, DEBUG, fmt, ##__VA_ARGS__)
+
 
 #endif

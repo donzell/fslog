@@ -21,7 +21,8 @@ void* routine(void* arg)
     
     while ( i++ < 10000000 )
     {
-        LOGGER_NOTICE(testlog,"%d, pad=%s",i,pad);
+        LOGGER_NOTICE_EVERY_N(testlog,1000,"%d, pad=%s",i,pad);
+        LOGGER_NOTICE_IF(testlog, i % 1000 == 0, "TEST LOGGER_NOTICE_IF(),i=%d",i);
     }
     GetTimeString(&time_str2,&len2);
     cout<<pthread_self()<<" "<<time_before<<"==>"<<time_str2<<endl;

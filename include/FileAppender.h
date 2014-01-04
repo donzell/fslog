@@ -81,6 +81,7 @@ public:
 private:
     void parseSplitFormat();
     void generateSplitFormatCharMap();
+    int openLogFile(const std::string& filePath);
     
     std::string path_;
     uint64_t splitSize_;

@@ -32,7 +32,7 @@ FileAppender::FileAppender(const string& path,uint64_t splitsize,const string& s
     :Appender(path),path_(path),splitSize_(splitsize),checkTimeInterval_(1),lastcheck_(0),fd_(-1),splitFormat_(splitFormat)
 {
     CreateDir(path_);
-    fd_ = open(path_.c_str(), O_CREAT | O_WRONLY | O_LARGEFILE, 0755);
+    fd_ = openLogFile(path);
     if(fd_ < 0){
         // 先占个坑，虽然我现在无法打开文件，比如因为路径权限问题，我先把日志刷到stderr
         // 运行过程中人工修改路径权限，我又能打开文件了，那时候checkFile过程中，fd_原子性指向新文件，我就能写了
@@ -118,16 +118,21 @@ FileAppender::~FileAppender()
         ::close(fd_);
 }
 
+int FileAppender::openLogFile(const std::string& filePath)
+{
+    return open(filePath.c_str(), O_CREAT | O_WRONLY | O_LARGEFILE | O_APPEND, 0755);
+}
+
 void FileAppender::reopen()
 {
     // if fd == -1,没有效果，也没有任何副作用。fd_将仍然指向旧文件。下次检查还会发现inode变化，继续尝试。
     // 如果open正在操作目标fd，也就是open返回fd_一样的数值，dup2返回 EBUSY。但是因为我们保证了fd_始终有效，open必然不会返回fd_一样的数值。所以dup要么成功，要么因为fd==-1而失败，如上所说，fd=-1没有影响。
     // dup2是原子的。利用这一点，我们不用多线程加锁了，这一技巧来自淘宝的开源tbcommon-utils中的tblog，感谢多隆大神。
 
-    int fd = open(path_.c_str(), O_CREAT | O_WRONLY | O_LARGEFILE, 0755);
+    int fd = openLogFile(path_);
     if(fd < 0 && errno == ENOENT){
         CreateDir(path_);
-        fd = open(path_.c_str(), O_CREAT | O_WRONLY | O_LARGEFILE, 0755);
+        fd = openLogFile(path_);
     }
     dup2(fd, fd_);
     close(fd);
@@ -227,7 +232,7 @@ void FileAppender::checkFile()
     }
     
         
-// 1.检查当前fd是否还指向log文件，不是则说明被mv或者rm了，重新open(path,O_CREAT|O_WRONLY|O_APPEND,0755)
+// 1.检查当前fd是否还指向log文件，不是则说明被mv或者rm了，重新openLogFile()
 // 2.检查log文件的大小，如果已经超过切分大小，mv，open
     struct stat stFile;
     struct stat stFd;
